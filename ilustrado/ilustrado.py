@@ -2,10 +2,11 @@
 
 # ilustrado modules
 from mutate import mutate
-from fitness import evaluate_fitness
+from generation import Generation
+from fitness import FitnessCalculator
 # matador modules
-from matador.scrapers.castep_scrapers import res2dict
-from matador.utils.chem_utils import get_formula_from_stoich
+from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
+from matador.utils.compute_utils import FullRelaxer
 # external libraries
 import numpy as np
 # standard library
@@ -21,19 +22,40 @@ class ArtificialSelector(object):
     and applies a genetic algorithm to optimise some
     fitness function.
     """
-    def __init__(self, gene_pool=None, debug=False):
+    def __init__(self, gene_pool=None, seed=None, fitness_metric='dummy', hull=None, debug=False):
         """ Initialise parameters, gene pool and begin GA. """
 
         print('Initialising Mother Nature...')
 
+        # set GA parameters
         self.population = 100
         self.num_survivors = 10
         self.num_generations = 10
         self.generations = []
+        self.hull = hull
+        self.fitness_metric = fitness_metric
+
+        if self.fitness_metric == 'hull' and self.hull is None:
+            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
 
         self.debug = debug
 
-        # if gene_pool is None, try to read from res files in pwd
+        # read parameters for relaxation from seed files
+        if seed is not None:
+            self.cell_dict, success_cell = cell2dict(seed)
+            if not success_cell:
+                print(self.cell_dict)
+                exit('Failed to read cell file.')
+            self.param_dict, success = param2dict(seed)
+            if not success_cell:
+                print(self.param_dict)
+                exit('Failed to read param file.')
+
+        # initialise fitness calculator
+        self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
+                                                    hull=self.hull)
+
+        # if gene_pool is None, try to read from res files in cwd
         if gene_pool is None:
             res_list = []
             for file in listdir('.'):
@@ -47,6 +69,7 @@ class ArtificialSelector(object):
             self.gene_pool = gene_pool
             for ind, parent in enumerate(self.gene_pool):
                 self.gene_pool[ind]['fitness'] = -1
+                self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
 
         # check gene pool is sensible
         try:
@@ -58,104 +81,54 @@ class ArtificialSelector(object):
             exit('Initial gene pool is not sensible, exiting...')
 
         # generation 0 is initial gene pool
-        self.generations.append(Generation(self.gene_pool, num_survivors=self.num_survivors))
+        self.generations.append(Generation(fitness_calculator=None,
+                                           populace=self.gene_pool,
+                                           num_survivors=self.num_survivors))
 
-        if self.debug:
-            print('Generation 0 initialised')
-            print(self.generations[-1])
+        print('Generation 0 initialised')
+        print(self.generations[-1])
 
-        # breed for self.num_generations
-        self.breed()
+        # run GA self.num_generations
+        while len(self.generations) < self.num_generations:
+            self.breed_generation()
 
-    def breed(self):
-        """ Build next generation from mutations of current. """
+        # plot simple fitness graph
+        self.fitness_swarm_plot()
 
-        num_generations = 0
-        while num_generations < self.num_generations:
-            next_gen = Generation()
+    def breed_generation(self):
+        """ Build next generation from mutations of current,
+        with relaxations.
+        """
 
-            while len(next_gen) < self.population:
-                parent = random.choice(self.generations[-1].bourgeoisie)
-                child = mutate(parent, debug=self.debug)
-                next_gen.birth(child)
+        next_gen = Generation(fitness_calculator=self.fitness_calculator)
 
-            next_gen.rank()
-            self.generations.append(deepcopy(next_gen))
-            num_generations += 1
-            self.analyse()
+        while len(next_gen) < self.population:
+            parent = random.choice(self.generations[-1].bourgeoisie)
+            newborn = mutate(parent, debug=self.debug)
+            specimen = FullRelaxer(newborn)
+            if specimen['optimised']:
+                next_gen.birth(specimen)
 
-        self.fitness_violin_plot()
+        next_gen.rank()
+        self.generations.append(deepcopy(next_gen))
+        self.analyse()
 
     def analyse(self):
         print('GENERATION {}\n'.format(len(self.generations)))
-        print(self.generations[-1])
+        if self.debug:
+            print(self.generations[-1])
+        print('Most fit: {}'.format(self.generations[-1].most_fit['raw_fitness']))
 
-    def fitness_violin_plot(self):
-        """ Make a violin plot of the fitness of all generations. """
+    def fitness_swarm_plot(self):
+        """ Make a swarm plot of the fitness of all generations. """
         import matplotlib.pyplot as plt
         import seaborn as sns
         sns.set_palette("Dark2", desat=.5)
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111)
-        fitnesses = np.asarray([generation.fitnesses for generation in self.generations if len(generation) > 1]).T
-        sns.violinplot(data=fitnesses, ax=ax, width=0.6, lw=0.5, palette=sns.color_palette("Dark2", desat=.5))
+        fitnesses = np.asarray([generation.raw_fitnesses for generation in self.generations if len(generation) > 1]).T
+        # sns.violinplot(data=fitnesses, ax=ax, inner=None, color=".6")
+        sns.swarmplot(data=fitnesses, ax=ax, linewidth=1, palette=sns.color_palette("Dark2", desat=.5))
         ax.set_xlabel('Generation number')
         ax.set_ylabel('Fitness')
         plt.show()
-
-
-class Generation(object):
-    """ Stores each generation of structures. """
-
-    def __init__(self, populace=[], num_survivors=10):
-
-        self.populace = populace
-        self.num_survivors = num_survivors
-
-    def __len__(self):
-        return len(self.populace)
-
-    def __str__(self):
-        gen_string = 80*'=' + '\n'
-        gen_string += 'Number of members: {}\n'.format(len(self.populace))
-        gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
-        for populum in self.populace:
-            gen_string += '{} {}\n'.format(get_formula_from_stoich(populum['stoichiometry']), populum['fitness'])
-        gen_string += 80*'=' + '\n'
-        return gen_string
-
-    def birth(self, populum):
-        self.populace.append(populum)
-
-    def rank(self):
-        for ind, populum in enumerate(self.populace):
-            self.populace[ind]['fitness'] = evaluate_fitness(populum)
-
-    @property
-    def bourgeoisie(self):
-        return sorted(self.populace, key=lambda member: member['fitness'])[:self.num_survivors]
-
-    @property
-    def fitnesses(self):
-        return [populum['fitness'] for populum in self.populace]
-
-    @property
-    def most_fit(self):
-        assert self.bourgeoisie[-1].fitness == max(self.fitnesses)
-        return self.bourgeoisie[-1]
-
-    @property
-    def average_pleb_fitness(self):
-        population = len(self.populace)
-        average_fitness = 0
-        for populum in self.populace:
-            average_fitness += populum['fitness'] / population
-        return average_fitness
-
-    @property
-    def average_bourgeois_fitness(self):
-        population = len(self.bourgeoisie)
-        average_fitness = 0
-        for populum in self.bourgeoisie:
-            average_fitness += populum['fitness'] / population
-        return average_fitness

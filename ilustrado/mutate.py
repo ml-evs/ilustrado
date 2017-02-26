@@ -1,6 +1,9 @@
 # coding: utf-8
 """ This file implements all possible single mutant
 mutations.
+
+TO-DO: fix metadata of mutated structures, e.g. sources.
+
 """
 import random
 import numpy as np

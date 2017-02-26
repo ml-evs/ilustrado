@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 from matador.query import DBQuery
+from matador.hull import QueryConvexHull
 from ilustrado import ArtificialSelector
 
-query = DBQuery(id='apostle underwear', db=['LiPX'], top=1)
+query = DBQuery(composition=['LiZn'], db=['LiPX'], subcmd='hull', biggest=True)
+hull = QueryConvexHull(query,
+                       subcmd='hull', no_plot=True,
+                       summary=True, hull_cutoff=5e-2)
 
-ArtificialSelector(gene_pool=query.cursor, debug=False)
+ArtificialSelector(gene_pool=hull.hull_cursor, debug=False)
