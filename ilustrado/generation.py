@@ -26,7 +26,7 @@ class Generation(object):
         gen_string += 'Number of members: {}\n'.format(len(self.populace))
         gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
         for populum in self.populace:
-            gen_string += '{} {}\n'.format(get_formula_from_stoich(populum['stoichiometry']), populum['fitness'])
+            gen_string += '{:10} {:5f}\n'.format(get_formula_from_stoich(populum['stoichiometry']), populum['fitness'])
         gen_string += 80*'=' + '\n'
         return gen_string
 

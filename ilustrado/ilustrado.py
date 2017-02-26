@@ -25,8 +25,18 @@ class ArtificialSelector(object):
     def __init__(self, gene_pool=None, seed=None, fitness_metric='dummy', hull=None, debug=False):
         """ Initialise parameters, gene pool and begin GA. """
 
-        print('Initialising Mother Nature...')
+        splash_screen = ("   _  _              _                     _\n"
+                         "  (_)| |            | |                   | |\n"
+                         "   _ | | _   _  ___ | |_  _ __   __ _   __| |  ___\n"
+                         "  | || || | | |/ __|| __|| '__| / _` | / _` | / _ \ \n"
+                         "  | || || |_| |\__ \| |_ | |   | (_| || (_| || (_) |\n"
+                         "  |_||_| \__,_||___/ \__||_|    \__,_| \__,_| \___/\n\n"
+                         "****************************************************\n")
+        print('\033[92m\033[1m', end='')
+        print('\n' + splash_screen)
+        print('\033[0m')
 
+        print('Loading harsh realities of life...')
         # set GA parameters
         self.population = 15
         self.num_survivors = 10
@@ -34,12 +44,13 @@ class ArtificialSelector(object):
         self.generations = []
         self.hull = hull
         self.fitness_metric = fitness_metric
+        self.debug = debug
 
         if self.fitness_metric == 'hull' and self.hull is None:
             exit('Need to pass a QueryConvexHull object to use hull distance metric.')
+        print('Done!')
 
-        self.debug = debug
-
+        print('Initialising quantum mechanics...')
         # read parameters for relaxation from seed files
         if seed is not None:
             self.cell_dict, success_cell = cell2dict(seed, db=False)
@@ -50,6 +61,7 @@ class ArtificialSelector(object):
             if not success_param:
                 print(self.param_dict)
                 exit('Failed to read param file.')
+        print('Done!')
 
         # hard code these for now
         self.ncores = 16
@@ -60,6 +72,7 @@ class ArtificialSelector(object):
                                                     hull=self.hull)
 
         # if gene_pool is None, try to read from res files in cwd
+        print('Seeding generation 0')
         if gene_pool is None:
             res_list = []
             for file in listdir('.'):
@@ -89,7 +102,6 @@ class ArtificialSelector(object):
                                            populace=self.gene_pool,
                                            num_survivors=self.num_survivors))
 
-        print('Generation 0 initialised')
         print(self.generations[-1])
 
         # run GA self.num_generations
@@ -109,13 +121,16 @@ class ArtificialSelector(object):
         while len(next_gen) < self.population:
             parent = random.choice(self.generations[-1].bourgeoisie)
             newborn = mutate(parent, debug=self.debug)
+            print('Relaxing: {}, {}'.format(newborn['stoichiometry'], newborn['source'][0]))
+            print('with mutations:', newborn['mutations'])
             relaxer = FullRelaxer(self.ncores, self.nnodes,
                                   newborn,
-                                  self.param_dict, self.cell_dict)
+                                  self.param_dict, self.cell_dict,
+                                  debug=False, verbosity=3)
             if relaxer.success:
-                specimen = relaxer.results
-                if specimen.get('optimised'):
-                    next_gen.birth(specimen)
+                newborn.update(relaxer.result_dict)
+                if newborn.get('optimised'):
+                    next_gen.birth(newborn)
 
         next_gen.rank()
         self.generations.append(deepcopy(next_gen))
