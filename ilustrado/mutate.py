@@ -9,28 +9,12 @@ import random
 import numpy as np
 from copy import deepcopy
 from matador.utils.cell_utils import cart2abc
+from matador.export import generate_hash
 from traceback import print_exc
 from sys import exit
 from bson.json_util import dumps
 from collections import defaultdict
 from math import gcd
-
-
-def _mutate(mutant, debug=False):
-    """ Choose a random mutation and apply it. """
-
-    debug = debug
-    possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
-    num_mutations = random.randint(1, 3)
-    # num_mutations = 1
-    if debug:
-        print('num_mutations', num_mutations)
-    # get random list of num_mutations mutators to apply
-    mutations = []
-    for i in range(num_mutations):
-        mutations.append(possible_mutations[random.randint(0, len(possible_mutations)-1)])
-    # apply successive mutations to mutant
-    [mutator(mutant, debug=debug) for mutator in mutations]
 
 
 def mutate(parent, debug=False):
@@ -49,7 +33,29 @@ def mutate(parent, debug=False):
         print('mutant:')
         print(dumps(mutant, indent=2))
         exit()
+    mutant['parents'] = [source.split('/')[-1].replace('.res', '').replace('.castep', '') for source in mutant['source'] if (source.endswith('.res') or source.endswith('.castep'))]
+    mutant['source'] = [mutant['parents'][0] + '_GA_' + generate_hash()]
     return mutant
+
+
+def _mutate(mutant, debug=False):
+    """ Choose a random mutation and apply it. """
+
+    debug = debug
+    possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
+    num_mutations = random.randint(1, 3)
+    # num_mutations = 1
+    if debug:
+        print('num_mutations', num_mutations)
+    # get random list of num_mutations mutators to apply
+    mutations = []
+    mutant['mutations'] = []
+    for i in range(num_mutations):
+        mutation = possible_mutations[random.randint(0, len(possible_mutations)-1)]
+        mutations.append(mutation)
+        mutant['mutations'].append(str(mutation).split(' ')[1])
+    # apply successive mutations to mutant
+    [mutator(mutant, debug=debug) for mutator in mutations]
 
 
 def permute_atoms(mutant, debug=False):

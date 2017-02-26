@@ -1,8 +1,8 @@
 # coding: utf-8
 """ This file implements all notions of fitness. """
 import numpy as np
-from matador.cursor_utils import get_array_from_cursor
-from matador.chem import get_concentration
+from matador.utils.cursor_utils import get_array_from_cursor
+from matador.utils.chem_utils import get_concentration
 
 
 class FitnessCalculator(object):
@@ -36,8 +36,10 @@ class FitnessCalculator(object):
         structures = np.hstack((get_array_from_cursor(generation, 'concentration'),
                                 get_array_from_cursor(generation, 'formation_enthalpy_per_atom')
                                 .reshape(len(generation), 1)))
-        self.hull.get_hull_distances(structures)
-        raise NotImplementedError
+        hull_dist, _, _ = self.hull.get_hull_distances(structures)
+        for ind, populum in enumerate(generation):
+            generation[ind]['hull_distance'] = hull_dist[ind]
+        return hull_dist
 
     def _get_dummy_fitness(self, generation):
         """ Generate dummy hull distances from -0.01 to 0.05. """

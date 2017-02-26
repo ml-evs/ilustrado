@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 # ilustrado modules
-from mutate import mutate
-from generation import Generation
-from fitness import FitnessCalculator
+from .mutate import mutate
+from .generation import Generation
+from .fitness import FitnessCalculator
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
-from matador.utils.compute_utils import FullRelaxer
+from matador.compute import FullRelaxer
 # external libraries
 import numpy as np
 # standard library
@@ -28,9 +28,9 @@ class ArtificialSelector(object):
         print('Initialising Mother Nature...')
 
         # set GA parameters
-        self.population = 100
+        self.population = 15
         self.num_survivors = 10
-        self.num_generations = 10
+        self.num_generations = 3
         self.generations = []
         self.hull = hull
         self.fitness_metric = fitness_metric
@@ -42,14 +42,18 @@ class ArtificialSelector(object):
 
         # read parameters for relaxation from seed files
         if seed is not None:
-            self.cell_dict, success_cell = cell2dict(seed)
+            self.cell_dict, success_cell = cell2dict(seed, db=False)
             if not success_cell:
                 print(self.cell_dict)
                 exit('Failed to read cell file.')
-            self.param_dict, success = param2dict(seed)
-            if not success_cell:
+            self.param_dict, success_param = param2dict(seed, db=False)
+            if not success_param:
                 print(self.param_dict)
                 exit('Failed to read param file.')
+
+        # hard code these for now
+        self.ncores = 16
+        self.nnodes = 1
 
         # initialise fitness calculator
         self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
@@ -105,9 +109,13 @@ class ArtificialSelector(object):
         while len(next_gen) < self.population:
             parent = random.choice(self.generations[-1].bourgeoisie)
             newborn = mutate(parent, debug=self.debug)
-            specimen = FullRelaxer(newborn)
-            if specimen['optimised']:
-                next_gen.birth(specimen)
+            relaxer = FullRelaxer(self.ncores, self.nnodes,
+                                  newborn,
+                                  self.param_dict, self.cell_dict)
+            if relaxer.success:
+                specimen = relaxer.results
+                if specimen.get('optimised'):
+                    next_gen.birth(specimen)
 
         next_gen.rank()
         self.generations.append(deepcopy(next_gen))
