@@ -11,9 +11,6 @@ hull = QueryConvexHull(query,
                        summary=True, hull_cutoff=5e-2)
 # lay out relaxation params
 doc2cell(query.cursor[1], 'ga_test')
-# query.cursor[1]['geom_max_iter'] = 100
-# print(query.cursor[1]['geom_max_iter'])
-# doc2param(query.cursor[1], 'ga_test')
-# print(query.cursor[1]['geom_max_iter'])
 
-ArtificialSelector(gene_pool=hull.hull_cursor, seed='ga_test', hull=hull, debug=False)
+# remove chempots
+ArtificialSelector(gene_pool=hull.hull_cursor[1:-1], seed='ga_test', hull=hull, debug=False)

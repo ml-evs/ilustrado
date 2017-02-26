@@ -35,6 +35,11 @@ def mutate(parent, debug=False):
         exit()
     mutant['parents'] = [source.split('/')[-1].replace('.res', '').replace('.castep', '') for source in mutant['source'] if (source.endswith('.res') or source.endswith('.castep'))]
     mutant['source'] = [mutant['parents'][0] + '_GA_' + generate_hash()]
+    try:
+        print(mutant['mutations'])
+    except:
+        print(mutant)
+        print_exc()
     return mutant
 
 

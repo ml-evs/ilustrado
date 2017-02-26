@@ -121,8 +121,12 @@ class ArtificialSelector(object):
         while len(next_gen) < self.population:
             parent = random.choice(self.generations[-1].bourgeoisie)
             newborn = mutate(parent, debug=self.debug)
-            print('Relaxing: {}, {}'.format(newborn['stoichiometry'], newborn['source'][0]))
-            print('with mutations:', newborn['mutations'])
+            try:
+                print('Relaxing: {}, {}'.format(newborn['stoichiometry'], newborn['source'][0]))
+                print('with mutations:', newborn['mutations'])
+            except:
+                print_exc()
+                continue
             relaxer = FullRelaxer(self.ncores, self.nnodes,
                                   newborn,
                                   self.param_dict, self.cell_dict,
