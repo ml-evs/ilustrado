@@ -38,9 +38,9 @@ class ArtificialSelector(object):
 
         print('Loading harsh realities of life...')
         # set GA parameters
-        self.population = 15
+        self.population = 25
         self.num_survivors = 10
-        self.num_generations = 3
+        self.num_generations = 5
         self.generations = []
         self.hull = hull
         self.fitness_metric = fitness_metric
@@ -85,6 +85,7 @@ class ArtificialSelector(object):
             # else, expect a list of matador documents
             self.gene_pool = gene_pool
             for ind, parent in enumerate(self.gene_pool):
+                del self.gene_pool[ind]['_id']
                 self.gene_pool[ind]['fitness'] = -1
                 self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
 
@@ -130,7 +131,7 @@ class ArtificialSelector(object):
             relaxer = FullRelaxer(self.ncores, self.nnodes,
                                   newborn,
                                   self.param_dict, self.cell_dict,
-                                  debug=False, verbosity=3)
+                                  debug=False, verbosity=0)
             if relaxer.success:
                 newborn.update(relaxer.result_dict)
                 if newborn.get('optimised'):
@@ -139,9 +140,10 @@ class ArtificialSelector(object):
         next_gen.rank()
         self.generations.append(deepcopy(next_gen))
         self.analyse()
+        self.generations[-1].dump(len(self.generations))
 
     def analyse(self):
-        print('GENERATION {}\n'.format(len(self.generations)))
+        print('GENERATION {}'.format(len(self.generations)))
         if self.debug:
             print(self.generations[-1])
         print('Most fit: {}'.format(self.generations[-1].most_fit['raw_fitness']))
@@ -157,5 +159,6 @@ class ArtificialSelector(object):
         # sns.violinplot(data=fitnesses, ax=ax, inner=None, color=".6")
         sns.swarmplot(data=fitnesses, ax=ax, linewidth=1, palette=sns.color_palette("Dark2", desat=.5))
         ax.set_xlabel('Generation number')
-        ax.set_ylabel('Fitness')
+        ax.set_ylabel('Distance to initial hull (eV/atom)')
+        plt.savefig('ga.pdf', dpi=300)
         plt.show()

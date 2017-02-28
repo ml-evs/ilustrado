@@ -7,6 +7,7 @@ evaulate their fitness.
 from matador.utils.chem_utils import get_formula_from_stoich
 # external libraries
 # standard library
+import json
 
 
 class Generation(object):
@@ -35,6 +36,10 @@ class Generation(object):
 
     def __iter__(self):
         return iter(self.populace)
+
+    def dump(self, gen_idx):
+        with open('gen_{}.json'.format(gen_idx), 'w') as f:
+            json.dump(self.populace, f)
 
     def birth(self, populum):
         self.populace.append(populum)
@@ -80,3 +85,4 @@ class Generation(object):
         for populum in self.bourgeoisie:
             average_fitness += populum['fitness'] / population
         return average_fitness
+
