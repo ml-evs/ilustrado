@@ -85,4 +85,3 @@ class Generation(object):
         for populum in self.bourgeoisie:
             average_fitness += populum['fitness'] / population
         return average_fitness
-

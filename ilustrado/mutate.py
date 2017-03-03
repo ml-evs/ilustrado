@@ -48,7 +48,7 @@ def _mutate(mutant, debug=False):
 
     debug = debug
     possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
-    num_mutations = random.randint(1, 3)
+    num_mutations = random.randint(1, 2)
     # num_mutations = 1
     if debug:
         print('num_mutations', num_mutations)

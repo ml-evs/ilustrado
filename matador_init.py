@@ -19,7 +19,7 @@ ArtificialSelector(gene_pool=hull.hull_cursor[1:-1],
                    seed='ga_test',
                    hull=hull,
                    debug=False,
-                   nnodes=4,
-                   # nodes=['node1', 'node2', 'node3', 'node4'],
-                   ncores=1,
-                   num_generations=2, population=10, num_survivors=10)
+                   # nnodes=4,
+                   nodes=['node1', 'node2', 'node3', 'node4'],
+                   ncores=16,
+                   num_generations=10, population=50, num_survivors=10)

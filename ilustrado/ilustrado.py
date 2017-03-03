@@ -144,7 +144,11 @@ class ArtificialSelector(object):
         while len(next_gen) < self.population and attempts < self.max_attempts:
             # are we using all nodes? if not, start some processes
             if len(procs) < self.nnodes:
-                parent = random.choice(self.generations[-1].bourgeoisie)
+                # if its the first generation use all possible structures as parents
+                if len(self.generations) == 1:
+                    parent = random.choice(self.generations.populace)
+                else:
+                    parent = random.choice(self.generations[-1].bourgeoisie)
                 newborns.append(mutate(parent, debug=self.debug))
                 newborn = newborns[-1]
                 newborn_id = len(newborns)-1
