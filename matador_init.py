@@ -11,6 +11,15 @@ hull = QueryConvexHull(query,
                        summary=True, hull_cutoff=5e-2)
 # lay out relaxation params
 doc2cell(query.cursor[1], 'ga_test')
+query.cursor[1]['geom_max_iter'] = 10
+doc2param(query.cursor[1], 'ga_test')
 
 # remove chempots
-ArtificialSelector(gene_pool=hull.hull_cursor[1:-1], seed='ga_test', hull=hull, debug=False)
+ArtificialSelector(gene_pool=hull.hull_cursor[1:-1],
+                   seed='ga_test',
+                   hull=hull,
+                   debug=False,
+                   nnodes=4,
+                   # nodes=['node1', 'node2', 'node3', 'node4'],
+                   ncores=1,
+                   num_generations=2, population=10, num_survivors=10)
