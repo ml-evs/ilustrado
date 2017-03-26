@@ -33,21 +33,25 @@ def mutate(parent, debug=False):
         print('mutant:')
         print(dumps(mutant, indent=2))
         exit()
-    mutant['parents'] = [source.split('/')[-1].replace('.res', '').replace('.castep', '') for source in mutant['source'] if (source.endswith('.res') or source.endswith('.castep'))]
+    mutant['parents'] = [source.split('/')[-1].replace('.res', '')
+                         .replace('.castep', '')
+                         for source in mutant['source'] if ('GA' in source or
+                                                            source.endswith('.res') or
+                                                            source.endswith('.castep'))]
     mutant['source'] = [mutant['parents'][0] + '_GA_' + generate_hash()]
-    try:
-        print(mutant['mutations'])
-    except:
-        print(mutant)
-        print_exc()
+    if debug:
+        try:
+            print(mutant['mutations'])
+        except:
+            print(mutant)
+            print_exc()
     return mutant
 
 
 def _mutate(mutant, debug=False):
     """ Choose a random mutation and apply it. """
-
     debug = debug
-    possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
+    possible_mutations = [nudge_positions]  # permute_atoms, random_strain, nudge_positions, vacancy]
     num_mutations = random.randint(1, 2)
     # num_mutations = 1
     if debug:
