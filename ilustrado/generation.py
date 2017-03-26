@@ -5,19 +5,24 @@ evaulate their fitness.
 
 # matador modules
 from matador.utils.chem_utils import get_formula_from_stoich
+from matador.export import generate_hash
 # external libraries
 # standard library
 import json
+from traceback import print_exc
 
 
-class Generation(object):
+class Generation():
     """ Stores each generation of structures. """
 
-    def __init__(self, populace=[], fitness_calculator=None, num_survivors=5):
+    def __init__(self, populace=None, fitness_calculator=None, num_survivors=5):
 
-        self.populace = populace
+        self.populace = []
+        if populace is not None:
+            self.populace = populace
         self._num_survivors = num_survivors
         self._fitness_calculator = fitness_calculator
+        self.generation_hash = generate_hash()
 
     def __len__(self):
         return len(self.populace)
@@ -42,6 +47,7 @@ class Generation(object):
             json.dump(self.populace, f)
 
     def birth(self, populum):
+        print('Birthing new structure..')
         self.populace.append(populum)
 
     def rank(self):
@@ -63,7 +69,8 @@ class Generation(object):
     def most_fit(self):
         try:
             assert self.bourgeoisie[0]['fitness'] == max(self.fitnesses)
-        except AssertionError:
+        except(IndexError, AssertionError):
+            print_exc()
             print(self.bourgeoisie)
             print('{} != {}'.format(self.bourgeoisie[0]['fitness'], max(self.fitnesses)))
             raise AssertionError
