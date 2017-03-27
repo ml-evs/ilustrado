@@ -126,6 +126,7 @@ class ArtificialSelector(object):
         # run GA self.num_generations
         while len(self.generations) < self.num_generations:
             self.breed_generation()
+            self.fitness_swarm_plot()
 
         # plot simple fitness graph
         self.fitness_swarm_plot()
@@ -150,7 +151,7 @@ class ArtificialSelector(object):
             free_nodes = self.nnodes * [None]
         else:
             free_nodes = self.nodes
-        self.max_attempts = 1.5 * self.population
+        self.max_attempts = 5 * self.population
         attempts = 0
         while len(next_gen) < self.population and attempts < self.max_attempts:
             if self.debug:
@@ -167,13 +168,12 @@ class ArtificialSelector(object):
                     newborn = newborns[-1]
                     newborn_id = len(newborns)-1
                     node = free_nodes.pop()
-                    relaxers.append(FullRelaxer(self.ncores, None, node, newborns[-1], self.param_dict, self.cell_dict, debug=False, verbosity=3, start=False))
+                    relaxers.append(FullRelaxer(self.ncores, None, node, newborns[-1], self.param_dict, self.cell_dict, debug=False, verbosity=0, start=False))
                     if self.debug:
                         try:
                             print('Relaxing: {}, {}'.format(newborn['stoichiometry'], newborn['source'][0]))
                             print('with mutations:', newborn['mutations'])
                             print('on node {} with {} cores.'.format(node, self.ncores))
-                            print(free_nodes, self.nodes)
                         except:
                             print_exc()
                             continue
@@ -232,6 +232,7 @@ class ArtificialSelector(object):
         """ Attempt to recover previous generations from files in cwd
         named 'gen_{}.json'.format(gen_idx).
         """
+        raise NotImplementedError
 
     def analyse(self):
         print('GENERATION {}'.format(len(self.generations)-1))
@@ -251,4 +252,5 @@ class ArtificialSelector(object):
         sns.swarmplot(data=fitnesses, ax=ax, linewidth=1, palette=sns.color_palette("Dark2", desat=.5))
         ax.set_xlabel('Generation number')
         ax.set_ylabel('Distance to initial hull (eV/atom)')
+        plt.show()
         plt.savefig(self.seed + '.pdf')
