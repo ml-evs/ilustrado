@@ -51,7 +51,7 @@ def mutate(parent, debug=False):
 def _mutate(mutant, debug=False):
     """ Choose a random mutation and apply it. """
     debug = debug
-    possible_mutations = [nudge_positions]  # permute_atoms, random_strain, nudge_positions, vacancy]
+    possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
     num_mutations = random.randint(1, 2)
     # num_mutations = 1
     if debug:
