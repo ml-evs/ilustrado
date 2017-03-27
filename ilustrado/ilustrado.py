@@ -142,6 +142,8 @@ class ArtificialSelector(object):
         next_gen = Generation(fitness_calculator=self.fitness_calculator)
         # newborns is a list of structures, initially raw then relaxed
         newborns = []
+        # relaxers is a list of relaxer objects
+        relaxers = []
         # procs is a list of tuples [(newborn_id, node, proc), ...]
         procs = []
         if self.nodes is None:
@@ -165,7 +167,7 @@ class ArtificialSelector(object):
                     newborn = newborns[-1]
                     newborn_id = len(newborns)-1
                     node = free_nodes.pop()
-                    relaxer = FullRelaxer(self.ncores, None, node, newborns[-1], self.param_dict, self.cell_dict, debug=False, verbosity=3, start=False)
+                    relaxers.append(FullRelaxer(self.ncores, None, node, newborns[-1], self.param_dict, self.cell_dict, debug=False, verbosity=3, start=False))
                     if self.debug:
                         try:
                             print('Relaxing: {}, {}'.format(newborn['stoichiometry'], newborn['source'][0]))
@@ -176,7 +178,7 @@ class ArtificialSelector(object):
                             print_exc()
                             continue
                     procs.append((newborn_id, node,
-                                  mp.Process(target=relaxer.relax)))
+                                  mp.Process(target=relaxers[-1].relax)))
                     procs[-1][2].start()
                     print('Process started...')
                 # are we using all nodes? if so, are they all still running?
@@ -192,11 +194,13 @@ class ArtificialSelector(object):
                             if self.debug:
                                 print(proc)
                                 print(newborns[proc[0]])
-                            if newborns[proc[0]].get('optimised'):
-                                next_gen.birth(newborns[proc[0]])
+                            result = newborns[proc[0]]
+                            if result.get('optimised'):
+                                next_gen.birth(result)
                             free_nodes.append(proc[1])
                             procs[ind][2].join()
                             del procs[ind]
+                            del relaxers[ind]
                             if self.debug:
                                 print(len(newborns), len(next_gen), attempts, self.population)
                             attempts += 1
