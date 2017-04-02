@@ -40,9 +40,11 @@ class FitnessCalculator(object):
     def _get_hull_distance(self, generation):
         for ind, populum in enumerate(generation):
             generation[ind]['concentration'] = get_concentration(populum, self.hull.elements)
-            generation[ind]['formation_enthalpy_per_atom'] = get_formation_energy(self.chempots, populum)
+            generation[ind]['formation_enthalpy_per_atom'] = get_formation_energy(self.chempots,
+                                                                                  populum)
             if self.debug:
-                print(generation[ind]['concentration'], generation[ind]['formation_enthalpy_per_atom'])
+                print(generation[ind]['concentration'],
+                      generation[ind]['formation_enthalpy_per_atom'])
         if self.testing:
             for ind, populum in enumerate(generation):
                 generation[ind]['formation_enthalpy_per_atom'] = np.random.rand() - 0.5

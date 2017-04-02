@@ -15,6 +15,7 @@ from time import sleep
 import multiprocessing as mp
 from traceback import print_exc
 from sys import exit
+from copy import deepcopy
 import random
 
 
@@ -24,7 +25,7 @@ class ArtificialSelector(object):
     fitness function.
     """
     def __init__(self, gene_pool=None, seed=None, fitness_metric='hull', hull=None,
-                 num_generations=5, num_survivors=10, population=25, recover=False,
+                 num_generations=5, num_survivors=10, population=25, elitism=0.2, recover=False,
                  debug=False, ncores=None, nnodes=2, nodes=None):
         """ Initialise parameters, gene pool and begin GA. """
 
@@ -44,6 +45,8 @@ class ArtificialSelector(object):
         self.population = population  # target size of each generation
         self.num_survivors = num_survivors  # number of survivors per generation
         self.num_generations = num_generations  # desired number of generations
+        self.elitism = elitism  # fraction of previous generation to carry throough
+        self.num_elitism = int(self.elitism * self.num_survivors)
         self.generations = []  # list to store all generations
         self.hull = hull  # QueryConvexHull object to calculate hull fitness
         self.fitness_metric = fitness_metric  # choose method of ranking structures
@@ -155,7 +158,9 @@ class ArtificialSelector(object):
         attempts = 0
         while len(next_gen) < self.population and attempts < self.max_attempts:
             if self.debug:
-                print('!!!!', next_gen.generation_hash, len(next_gen.populace), len(next_gen), self.population, attempts, self.max_attempts, '!!!!')
+                print('!!!!', next_gen.generation_hash,
+                      len(next_gen.populace), len(next_gen),
+                      self.population, attempts, self.max_attempts, '!!!!')
             if not self.testing:
                 # are we using all nodes? if not, start some processes
                 if len(procs) < self.nnodes:
@@ -168,10 +173,13 @@ class ArtificialSelector(object):
                     newborn = newborns[-1]
                     newborn_id = len(newborns)-1
                     node = free_nodes.pop()
-                    relaxers.append(FullRelaxer(self.ncores, None, node, newborns[-1], self.param_dict, self.cell_dict, debug=False, verbosity=0, start=False))
+                    relaxers.append(FullRelaxer(self.ncores, None, node,
+                                                newborns[-1], self.param_dict, self.cell_dict,
+                                                debug=False, verbosity=0, start=False))
                     if self.debug:
                         try:
-                            print('Relaxing: {}, {}'.format(newborn['stoichiometry'], newborn['source'][0]))
+                            print('Relaxing: {}, {}'.format(newborn['stoichiometry'],
+                                                            newborn['source'][0]))
                             print('with mutations:', newborn['mutations'])
                             print('on node {} with {} cores.'.format(node, self.ncores))
                         except:
@@ -188,7 +196,8 @@ class ArtificialSelector(object):
                 # so we were using all nodes, but some have died...
                 else:
                     print('Found a dead node!')
-                    # then find the dead ones, collect their results and delete them so we're no longer using all nodes
+                    # then find the dead ones, collect their results and
+                    # delete them so we're no longer using all nodes
                     for ind, proc in enumerate(procs):
                         if not proc[2].is_alive():
                             if self.debug:
@@ -201,10 +210,12 @@ class ArtificialSelector(object):
                             procs[ind][2].join()
                             del procs[ind]
                             del relaxers[ind]
+                            next_gen.dump('current')
                             if self.debug:
                                 print(len(newborns), len(next_gen), attempts, self.population)
                             attempts += 1
-                            # break so that sometimes we skip some cycles of the while loop, but don't end up oversubmitting
+                            # break so that sometimes we skip some cycles of the while loop,
+                            # but don't end up oversubmitting
                             break
             else:
                 if len(self.generations) == 1:
@@ -223,6 +234,16 @@ class ArtificialSelector(object):
             exit()
 
         assert len(next_gen) == self.population
+        # add random elite structures from previous gen
+        if self.debug:
+            print('Adding {} structures from previous generation...'.format(self.num_elite))
+        for i in range(self.num_elite):
+            doc = deepcopy(np.random.choice(self.generations[-1].bourgeoisie))
+            if self.debug:
+                print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
+                                                           doc['hull_distance']))
+        if self.debug:
+            print('New length: {}'.format(len(next_gen)))
         next_gen.rank()
         self.generations.append(next_gen)
         self.generations[-1].dump(len(self.generations)-1)
@@ -247,9 +268,12 @@ class ArtificialSelector(object):
         sns.set_palette("Dark2", desat=.5)
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111)
-        fitnesses = np.asarray([generation.raw_fitnesses for generation in self.generations if len(generation) > 1]).T
+        fitnesses = np.asarray([generation.raw_fitnesses for generation in self.generations
+                                if len(generation) > 1]).T
         sns.violinplot(data=fitnesses, ax=ax, inner=None, color=".6")
-        sns.swarmplot(data=fitnesses, ax=ax, linewidth=1, palette=sns.color_palette("Dark2", desat=.5))
+        sns.swarmplot(data=fitnesses, ax=ax,
+                      linewidth=1,
+                      palette=sns.color_palette("Dark2", desat=.5))
         ax.set_xlabel('Generation number')
         ax.set_ylabel('Distance to initial hull (eV/atom)')
         plt.show()

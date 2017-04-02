@@ -32,7 +32,8 @@ class Generation():
         gen_string += 'Number of members: {}\n'.format(len(self.populace))
         gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
         for populum in self.populace:
-            gen_string += '{:10} {:5f}\n'.format(get_formula_from_stoich(populum['stoichiometry']), populum['fitness'])
+            gen_string += '{:10} {:5f}\n'.format(get_formula_from_stoich(populum['stoichiometry']),
+                                                 populum['fitness'])
         gen_string += 80*'=' + '\n'
         return gen_string
 
@@ -42,8 +43,8 @@ class Generation():
     def __iter__(self):
         return iter(self.populace)
 
-    def dump(self, gen_idx):
-        with open('gen_{}.json'.format(gen_idx), 'w') as f:
+    def dump(self, gen_suffix):
+        with open('gen_{}.json'.format(gen_suffix), 'w') as f:
             json.dump(self.populace, f)
 
     def birth(self, populum):
@@ -55,7 +56,9 @@ class Generation():
 
     @property
     def bourgeoisie(self):
-        return sorted(self.populace, key=lambda member: member['fitness'], reverse=True)[:self._num_survivors]
+        return sorted(self.populace,
+                      key=lambda member: member['fitness'],
+                      reverse=True)[:self._num_survivors]
 
     @property
     def fitnesses(self):
