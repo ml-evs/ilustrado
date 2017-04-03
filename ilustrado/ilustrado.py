@@ -192,10 +192,9 @@ class ArtificialSelector(object):
                         newborn = newborns[-1]
                         newborn_id = len(newborns)-1
                         node = free_nodes.pop()
-                        print('wtf is happening')
                         relaxer = FullRelaxer(self.ncores, None, node,
                                               newborns[-1], self.param_dict, self.cell_dict,
-                                              debug=True, verbosity=3,
+                                              debug=False, verbosity=0,
                                               start=False, redirect=False)
                         if self.debug:
                             print('Relaxing: {}, {}'.format(newborn['stoichiometry'],
@@ -220,18 +219,19 @@ class ArtificialSelector(object):
                         for ind, proc in enumerate(procs):
                             if not proc[2].is_alive():
                                 result = queues[ind].get()
-                                result['parents'] = newborns[proc[0]]['parents']
-                                result['mutations'] = newborns[proc[0]]['mutations']
-                                if self.debug:
-                                    print(proc)
-                                    print(dumps(result, sort_keys=True))
-                                if result.get('optimised'):
-                                    next_gen.birth(result)
-                                free_nodes.append(proc[1])
+                                if isinstance(result, dict):
+                                    if self.debug:
+                                        print(proc)
+                                        print(dumps(result, sort_keys=True))
+                                    if result.get('optimised'):
+                                        result['parents'] = newborns[proc[0]]['parents']
+                                        result['mutations'] = newborns[proc[0]]['mutations']
+                                        next_gen.birth(result)
+                                        next_gen.dump('current')
                                 procs[ind][2].join()
+                                free_nodes.append(proc[1])
                                 del procs[ind]
                                 del queues[ind]
-                                next_gen.dump('current')
                                 if self.debug:
                                     print(len(newborns), len(next_gen), attempts, self.population)
                                 attempts += 1
