@@ -5,7 +5,6 @@ evaulate their fitness.
 
 # matador modules
 from matador.utils.chem_utils import get_formula_from_stoich
-from matador.export import generate_hash
 # external libraries
 # standard library
 import json
@@ -15,14 +14,16 @@ from traceback import print_exc
 class Generation():
     """ Stores each generation of structures. """
 
-    def __init__(self, populace=None, fitness_calculator=None, num_survivors=5):
+    def __init__(self, run_hash, generation_idx, num_survivors,
+                 populace=None, fitness_calculator=None):
 
         self.populace = []
         if populace is not None:
             self.populace = populace
         self._num_survivors = num_survivors
         self._fitness_calculator = fitness_calculator
-        self.generation_hash = generate_hash()
+        self.run_hash = run_hash
+        self.generation_idx = generation_idx
 
     def __len__(self):
         return len(self.populace)
@@ -44,7 +45,7 @@ class Generation():
         return iter(self.populace)
 
     def dump(self, gen_suffix):
-        with open('gen_{}.json'.format(gen_suffix), 'w') as f:
+        with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
             json.dump(self.populace, f)
 
     def birth(self, populum):
