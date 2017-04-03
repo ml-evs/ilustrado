@@ -18,7 +18,7 @@ setup(name='ilustrado',
       install_requires=[
           'numpy>=1.10',
           'scipy>=0.18',
-          'matador',
+        # 'matador', requires a local install of matador
           'matplotlib==1.5',
           'seaborn'
       ],
