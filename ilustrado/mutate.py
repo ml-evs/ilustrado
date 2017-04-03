@@ -9,7 +9,6 @@ import random
 import numpy as np
 from copy import deepcopy
 from matador.utils.cell_utils import cart2abc
-from matador.export import generate_hash
 from traceback import print_exc
 from sys import exit
 from bson.json_util import dumps
@@ -33,12 +32,6 @@ def mutate(parent, debug=False):
         print('mutant:')
         print(dumps(mutant, indent=2))
         exit()
-    mutant['parents'] = [source.split('/')[-1].replace('.res', '')
-                         .replace('.castep', '')
-                         for source in mutant['source'] if ('GA' in source or
-                                                            source.endswith('.res') or
-                                                            source.endswith('.castep'))]
-    mutant['source'] = [mutant['parents'][0] + '_GA_' + generate_hash()]
     if debug:
         try:
             print(mutant['mutations'])
@@ -106,7 +99,8 @@ def vacancy(mutant, debug=False):
 
     vacancy_idx = random.randint(0, mutant['num_atoms']-1)
     if debug:
-        print('Removing atom {} of type {} from cell.'.format(vacancy_idx, mutant['atom_types'][vacancy_idx]))
+        print('Removing atom {} of type {} from cell.'.format(vacancy_idx,
+                                                              mutant['atom_types'][vacancy_idx]))
     del mutant['atom_types'][vacancy_idx]
     del mutant['positions_frac'][vacancy_idx]
     try:
@@ -176,7 +170,8 @@ def random_strain(mutant, debug=False):
             if debug:
                 print(cell_transform_matrix)
             # exclude all strains that take us to sub-60 and sup-120 cell angles
-            new_lattice_abc = cart2abc(np.matmul(cell_transform_matrix, np.array(mutant['lattice_cart'])))
+            new_lattice_abc = cart2abc(np.matmul(cell_transform_matrix,
+                                       np.array(mutant['lattice_cart'])))
             for angle in new_lattice_abc[1]:
                 if angle > 120 or angle < 60:
                     valid = False
@@ -186,7 +181,8 @@ def random_strain(mutant, debug=False):
                 if length < mean_lat_vec / 2:
                     valid = False
 
-    mutant['lattice_cart'] = np.matmul(cell_transform_matrix, np.array(mutant['lattice_cart'])).tolist()
+    mutant['lattice_cart'] = np.matmul(cell_transform_matrix,
+                                       np.array(mutant['lattice_cart'])).tolist()
     mutant['lattice_abc'] = cart2abc(mutant['lattice_cart'])
     if debug:
         print('lattice_abc:', mutant['lattice_abc'])
