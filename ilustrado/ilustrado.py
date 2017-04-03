@@ -7,6 +7,7 @@ from .fitness import FitnessCalculator
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
+from matador.export import generate_hash
 # external libraries
 import numpy as np
 # standard library
@@ -14,6 +15,7 @@ from os import listdir
 from time import sleep
 import multiprocessing as mp
 from traceback import print_exc
+from json import dumps
 from sys import exit
 from copy import deepcopy
 import random
@@ -26,7 +28,7 @@ class ArtificialSelector(object):
     """
     def __init__(self, gene_pool=None, seed=None, fitness_metric='hull', hull=None,
                  num_generations=5, num_survivors=10, population=25, elitism=0.2, recover=False,
-                 debug=False, ncores=None, nnodes=2, nodes=None):
+                 debug=False, ncores=None, nnodes=None, nodes=None):
         """ Initialise parameters, gene pool and begin GA. """
 
         splash_screen = ("   _  _              _                     _\n"
@@ -50,20 +52,20 @@ class ArtificialSelector(object):
         self.generations = []  # list to store all generations
         self.hull = hull  # QueryConvexHull object to calculate hull fitness
         self.fitness_metric = fitness_metric  # choose method of ranking structures
+        self.run_hash = generate_hash()
+        assert self.num_survivors < self.population + self.num_elitism, 'Survivors > population!'
 
-        #
         self.recover = recover  # recover from previous run
         self.debug = debug
         self.testing = False
         self.ncores = ncores
         self.nodes = nodes
+        self.initial_nodes = nodes
         if self.nodes is None:
-            self.nnodes = nnodes
+            # if no nodes specified, run on all cores of current node
+            self.nnodes = 1
         else:
             self.nnodes = len(self.nodes)
-
-        if self.debug:
-            print(self.nodes)
 
         if self.fitness_metric == 'hull' and self.hull is None:
             exit('Need to pass a QueryConvexHull object to use hull distance metric.')
@@ -74,6 +76,7 @@ class ArtificialSelector(object):
         print('Initialising quantum mechanics...')
         # read parameters for relaxation from seed files
         if seed is not None:
+            self.seed = seed
             self.cell_dict, success_cell = cell2dict(seed, db=False)
             if not success_cell:
                 print(self.cell_dict)
@@ -120,11 +123,16 @@ class ArtificialSelector(object):
             exit('Initial gene pool is not sensible, exiting...')
 
         # generation 0 is initial gene pool
-        self.generations.append(Generation(fitness_calculator=None,
-                                           populace=self.gene_pool,
-                                           num_survivors=self.num_survivors))
+        self.generations.append(Generation(self.run_hash,
+                                           len(self.generations),
+                                           self.num_survivors,
+                                           fitness_calculator=None,
+                                           populace=self.gene_pool))
 
         print(self.generations[-1])
+
+        if self.debug:
+            print(self.nodes)
 
         # run GA self.num_generations
         while len(self.generations) < self.num_generations:
@@ -143,88 +151,109 @@ class ArtificialSelector(object):
         """ Build next generation from mutations of current,
         and perform relaxations if necessary.
         """
-        next_gen = Generation(fitness_calculator=self.fitness_calculator)
+        next_gen = Generation(self.run_hash,
+                              len(self.generations),
+                              self.num_survivors,
+                              fitness_calculator=self.fitness_calculator)
         # newborns is a list of structures, initially raw then relaxed
         newborns = []
-        # relaxers is a list of relaxer objects
-        relaxers = []
         # procs is a list of tuples [(newborn_id, node, proc), ...]
         procs = []
+        # queues is a list of mp.Queues where return values will end up
+        queues = []
         if self.nodes is None:
             free_nodes = self.nnodes * [None]
         else:
             free_nodes = self.nodes
         self.max_attempts = 5 * self.population
         attempts = 0
-        while len(next_gen) < self.population and attempts < self.max_attempts:
-            if self.debug:
-                print('!!!!', next_gen.generation_hash,
-                      len(next_gen.populace), len(next_gen),
-                      self.population, attempts, self.max_attempts, '!!!!')
-            if not self.testing:
-                # are we using all nodes? if not, start some processes
-                if len(procs) < self.nnodes:
-                    # if its the first generation use all possible structures as parents
+        try:
+            while len(next_gen) < self.population and attempts < self.max_attempts:
+                if self.debug:
+                    print(len(next_gen), self.population, attempts, self.max_attempts)
+                if not self.testing:
+                    # are we using all nodes? if not, start some processes
+                    if len(procs) < self.nnodes:
+                        # if its the first generation use all possible structures as parents
+                        if len(self.generations) == 1:
+                            parent = random.choice(self.generations[-1].populace)
+                        else:
+                            parent = random.choice(self.generations[-1].bourgeoisie)
+                        newborns.append(mutate(parent, debug=self.debug))
+                        newborns[-1]['source'] = ['{}-GA-{}-{}x{}'.format(self.seed,
+                                                                          self.run_hash,
+                                                                          len(self.generations),
+                                                                          len(newborns))]
+                        for source in parent['source']:
+                            if source.endswith('.res') or source.endswith('.castep'):
+                                parent_source = source.split('/')[-1] \
+                                                      .replace('.res', '').replace('.castep', '')
+                        newborns[-1]['parents'] = [parent_source]
+                        newborn = newborns[-1]
+                        newborn_id = len(newborns)-1
+                        node = free_nodes.pop()
+                        print('wtf is happening')
+                        relaxer = FullRelaxer(self.ncores, None, node,
+                                              newborns[-1], self.param_dict, self.cell_dict,
+                                              debug=True, verbosity=3,
+                                              start=False, redirect=False)
+                        if self.debug:
+                            print('Relaxing: {}, {}'.format(newborn['stoichiometry'],
+                                                            newborn['source'][0]))
+                            print('with mutations:', newborn['mutations'])
+                            print('on node {} with {} cores.'.format(node, self.ncores))
+                        queues.append(mp.Queue())
+                        procs.append((newborn_id, node,
+                                      mp.Process(target=relaxer.relax,
+                                                 args=(queues[-1],))))
+                        procs[-1][2].start()
+                        print('Process started...')
+                    # are we using all nodes? if so, are they all still running?
+                    elif len(procs) == self.nnodes and all([proc[2].is_alive() for proc in procs]):
+                        # poll processes every second
+                        sleep(10)
+                    # so we were using all nodes, but some have died...
+                    else:
+                        print('Found a dead node!')
+                        # then find the dead ones, collect their results and
+                        # delete them so we're no longer using all nodes
+                        for ind, proc in enumerate(procs):
+                            if not proc[2].is_alive():
+                                result = queues[ind].get()
+                                result['parents'] = newborns[proc[0]]['parents']
+                                result['mutations'] = newborns[proc[0]]['mutations']
+                                if self.debug:
+                                    print(proc)
+                                    print(dumps(result, sort_keys=True))
+                                if result.get('optimised'):
+                                    next_gen.birth(result)
+                                free_nodes.append(proc[1])
+                                procs[ind][2].join()
+                                del procs[ind]
+                                del queues[ind]
+                                next_gen.dump('current')
+                                if self.debug:
+                                    print(len(newborns), len(next_gen), attempts, self.population)
+                                attempts += 1
+                                # break so that sometimes we skip some cycles of the while loop,
+                                # but don't end up oversubmitting
+                                break
+                else:
                     if len(self.generations) == 1:
                         parent = random.choice(self.generations[-1].populace)
                     else:
                         parent = random.choice(self.generations[-1].bourgeoisie)
                     newborns.append(mutate(parent, debug=self.debug))
-                    newborn = newborns[-1]
-                    newborn_id = len(newborns)-1
-                    node = free_nodes.pop()
-                    relaxers.append(FullRelaxer(self.ncores, None, node,
-                                                newborns[-1], self.param_dict, self.cell_dict,
-                                                debug=False, verbosity=0, start=False))
-                    if self.debug:
-                        try:
-                            print('Relaxing: {}, {}'.format(newborn['stoichiometry'],
-                                                            newborn['source'][0]))
-                            print('with mutations:', newborn['mutations'])
-                            print('on node {} with {} cores.'.format(node, self.ncores))
-                        except:
-                            print_exc()
-                            continue
-                    procs.append((newborn_id, node,
-                                  mp.Process(target=relaxers[-1].relax)))
-                    procs[-1][2].start()
-                    print('Process started...')
-                # are we using all nodes? if so, are they all still running?
-                elif len(procs) == self.nnodes and all([proc[2].is_alive() for proc in procs]):
-                    # poll processes every second
-                    sleep(10)
-                # so we were using all nodes, but some have died...
-                else:
-                    print('Found a dead node!')
-                    # then find the dead ones, collect their results and
-                    # delete them so we're no longer using all nodes
-                    for ind, proc in enumerate(procs):
-                        if not proc[2].is_alive():
-                            if self.debug:
-                                print(proc)
-                                print(newborns[proc[0]])
-                            result = newborns[proc[0]]
-                            if result.get('optimised'):
-                                next_gen.birth(result)
-                            free_nodes.append(proc[1])
-                            procs[ind][2].join()
-                            del procs[ind]
-                            del relaxers[ind]
-                            next_gen.dump('current')
-                            if self.debug:
-                                print(len(newborns), len(next_gen), attempts, self.population)
-                            attempts += 1
-                            # break so that sometimes we skip some cycles of the while loop,
-                            # but don't end up oversubmitting
-                            break
-            else:
-                if len(self.generations) == 1:
-                    parent = random.choice(self.generations[-1].populace)
-                else:
-                    parent = random.choice(self.generations[-1].bourgeoisie)
-                newborns.append(mutate(parent, debug=self.debug))
-                next_gen.birth(newborns[-1])
-        # cleanup if still unfinished
+                    next_gen.birth(newborns[-1])
+        except:
+            print_exc()
+            # clean up on error/interrupt
+            if len(procs) > 1:
+                for proc in procs:
+                    proc[2].terminate()
+            raise SystemExit
+
+        # clean up at end either way
         if len(procs) > 1:
             for proc in procs:
                 proc[2].terminate()
