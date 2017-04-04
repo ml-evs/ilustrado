@@ -44,7 +44,8 @@ def mutate(parent, debug=False):
 def _mutate(mutant, debug=False):
     """ Choose a random mutation and apply it. """
     debug = debug
-    possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
+    # possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
+    possible_mutations = [nudge_positions]
     num_mutations = random.randint(1, 2)
     # num_mutations = 1
     if debug:
@@ -190,9 +191,8 @@ def random_strain(mutant, debug=False):
         print('cell_transform_matrix:', cell_transform_matrix.tolist())
 
 
-def nudge_positions(mutant, amplitude=0.1, debug=False):
+def nudge_positions(mutant, amplitude=0.001, debug=False):
     """ Apply Gaussian noise to all atomic positions. """
-
     new_positions_frac = np.array(mutant['positions_frac'])
     for ind, atom in enumerate(mutant['positions_frac']):
         # generate random noise vector between -amplitude and amplitude

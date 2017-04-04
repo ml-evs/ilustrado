@@ -46,7 +46,7 @@ class Generation():
 
     def dump(self, gen_suffix):
         with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
-            json.dump(self.populace, f)
+            json.dump(self.populace, f, sort_keys=True, indent=2)
 
     def birth(self, populum):
         print('Birthing new structure..')
