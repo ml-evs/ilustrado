@@ -28,9 +28,23 @@ class ArtificialSelector(object):
     and applies a genetic algorithm to optimise some
     fitness function.
     """
-    def __init__(self, gene_pool=None, seed=None, fitness_metric='hull', hull=None,
-                 num_generations=5, num_survivors=10, population=25, elitism=0.2, recover=False,
-                 debug=False, ncores=None, nprocs=1, nodes=None, loglevel='info'):
+    def __init__(self,
+                 gene_pool=None,
+                 seed=None,
+                 fitness_metric='hull',
+                 hull=None,
+                 mutation_rate=1.0,
+                 crossover_rate=0.0,
+                 num_generations=5,
+                 num_survivors=10,
+                 population=25,
+                 elitism=0.2,
+                 ncores=None,
+                 nprocs=1,
+                 nodes=None,
+                 recover=False,
+                 debug=False,
+                 loglevel='info'):
         """ Initialise parameters, gene pool and begin GA. """
 
         splash_screen = (r"   _  _              _                     _" + '\n'
@@ -47,14 +61,16 @@ class ArtificialSelector(object):
         print('Loading harsh realities of life...')
         # set GA parameters
         self.population = population  # target size of each generation
-        self.num_survivors = num_survivors  # number of survivors per generation
-        self.num_generations = num_generations  # desired number of generations
+        self.num_survivors = num_survivors
+        self.num_generations = num_generations
         self.elitism = elitism  # fraction of previous generation to carry throough
         self.num_elite = int(self.elitism * self.num_survivors)
         assert self.num_survivors < self.population + self.num_elite, 'Survivors > population!'
         self.generations = []  # list to store all generations
         self.hull = hull  # QueryConvexHull object to calculate hull fitness
         self.fitness_metric = fitness_metric  # choose method of ranking structures
+        self.mutation_rate = mutation_rate
+        self.crossover_rate = crossover_rate
 
         # set up logistics
         self.run_hash = generate_hash()
