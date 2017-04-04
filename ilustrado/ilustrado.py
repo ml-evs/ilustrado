@@ -5,6 +5,7 @@ from .mutate import mutate
 from .generation import Generation
 from .fitness import FitnessCalculator
 from .analysis import display_gen, fitness_swarm_plot
+from .util import strip_useless
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
@@ -260,6 +261,7 @@ class ArtificialSelector(object):
                                                               .join(newborns[proc[0]]['source'])))
                                         result['parents'] = newborns[proc[0]]['parents']
                                         result['mutations'] = newborns[proc[0]]['mutations']
+                                    result = strip_useless(result)
                                     next_gen.birth(result)
                                     logging.info('Newborn {} added to next generation.'
                                                  .format(', '.join(newborns[proc[0]]['source'])))
