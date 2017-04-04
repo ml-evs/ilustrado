@@ -5,9 +5,10 @@
 def strip_useless(doc):
     """ Strip useless information from a matador doc. """
     stripped_doc = dict()
-    keys = ['source', 'user', 'parents', 'mutations',
-            'positions_frac', 'num_atoms', 'atom_types', 'stoichiometry', 'elems',
+    keys = ['source', 'parents', 'mutations',
+            'elems', 'stoichiometry',
             'lattice_abc', 'lattice_cart', 'cell_volume', 'space_group',
+            'positions_frac', 'num_atoms', 'atom_types',
             'enthalpy', 'enthalpy_per_atom', 'total_energy', 'total_energy_per_atom',
             'pressure', 'max_force_on_atom', 'optimised',
             'date', 'total_time_hrs', 'peak_mem_MB']
