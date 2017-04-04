@@ -203,7 +203,10 @@ class ArtificialSelector(object):
                     possible_parents = (self.generations[-1].populace
                                         if len(self.generations) == 1
                                         else self.generations[-1].bourgeoisie)
-                    newborn = adapt(possible_parents, debug=self.debug)
+                    newborn = adapt(possible_parents,
+                                    self.mutation_rate,
+                                    self.crossover_rate,
+                                    debug=self.debug)
                     # set source of newborn
                     newborn['source'] = ['{}-GA-{}-{}x{}'.format(self.seed,
                                                                  self.run_hash,

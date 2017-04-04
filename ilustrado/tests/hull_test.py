@@ -34,7 +34,8 @@ def hull_test():
     cursor = [hull.hull_cursor[1:-1][ind] for ind in uniq_list]
     print([doc['num_atoms'] for doc in cursor])
     cursor = [doc for doc in cursor if doc['num_atoms'] < 7]
-    print('Found {} structures with fewer than 7 atoms'.format(len(cursor)))
+
+    print('Running on {} cores on {}.'.format(cpus, uname()[1]))
 
     ArtificialSelector(gene_pool=cursor,
                        seed='KP',
@@ -43,6 +44,7 @@ def hull_test():
                        fitness_metric='hull',
                        nprocs=cpus,
                        ncores=1,
+                       mutation_rate=1, crossover_rate=0,
                        num_generations=10, population=10,
                        num_survivors=10, elitism=0.3,
                        loglevel='debug')
