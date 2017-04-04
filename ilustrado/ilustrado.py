@@ -218,7 +218,11 @@ class ArtificialSelector(object):
                         # delete them so we're no longer using all nodes
                         for ind, proc in enumerate(procs):
                             if not proc[2].is_alive():
-                                result = queues[ind].get()
+                                try:
+                                    result = queues[ind].get(timeout=10)
+                                except:
+                                    print(proc, 'failed to write to queue within timeout.')
+                                    result = False
                                 if isinstance(result, dict):
                                     if self.debug:
                                         print(proc)
