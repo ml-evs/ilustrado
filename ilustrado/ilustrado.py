@@ -50,8 +50,8 @@ class ArtificialSelector(object):
         self.num_survivors = num_survivors  # number of survivors per generation
         self.num_generations = num_generations  # desired number of generations
         self.elitism = elitism  # fraction of previous generation to carry throough
-        self.num_elitism = int(self.elitism * self.num_survivors)
-        assert self.num_survivors < self.population + self.num_elitism, 'Survivors > population!'
+        self.num_elite = int(self.elitism * self.num_survivors)
+        assert self.num_survivors < self.population + self.num_elite, 'Survivors > population!'
         self.generations = []  # list to store all generations
         self.hull = hull  # QueryConvexHull object to calculate hull fitness
         self.fitness_metric = fitness_metric  # choose method of ranking structures
@@ -214,7 +214,7 @@ class ArtificialSelector(object):
                                          ', '.join(newborns[-1]['mutations'])))
                     relaxer = FullRelaxer(self.ncores, None, node,
                                           newborns[-1], self.param_dict, self.cell_dict,
-                                          debug=False, verbosity=2,
+                                          debug=False, verbosity=0,
                                           start=False, redirect=False)
                     if self.debug:
                         print('Relaxing: {}, {}'.format(newborn['stoichiometry'],
@@ -254,8 +254,12 @@ class ArtificialSelector(object):
                                 if result.get('optimised'):
                                     logging.debug('Newborn {} successfully optimised'
                                                   .format(', '.join(newborns[proc[0]]['source'])))
-                                    result['parents'] = newborns[proc[0]]['parents']
-                                    result['mutations'] = newborns[proc[0]]['mutations']
+                                    if result.get('parents') is None:
+                                        logging.debug('Failed to get parents for newborn {}.'
+                                                      .format(', '
+                                                              .join(newborns[proc[0]]['source'])))
+                                        result['parents'] = newborns[proc[0]]['parents']
+                                        result['mutations'] = newborns[proc[0]]['mutations']
                                     next_gen.birth(result)
                                     logging.info('Newborn {} added to next generation.'
                                                  .format(', '.join(newborns[proc[0]]['source'])))
