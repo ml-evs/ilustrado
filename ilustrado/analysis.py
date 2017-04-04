@@ -25,5 +25,4 @@ def fitness_swarm_plot(generations):
                   palette=sns.color_palette("Dark2", desat=.5))
     ax.set_xlabel('Generation number')
     ax.set_ylabel('Distance to initial hull (eV/atom)')
-    plt.show()
     plt.savefig(generations[0].run_hash + '_swarmplot.pdf')

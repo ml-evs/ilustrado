@@ -18,6 +18,7 @@ class FitnessCalculator(object):
             if hull is None:
                 raise RuntimeError('Cannot calculate hull distanace without a hull!')
             self.hull = hull
+            self.chempots = hull.match
         elif self.fitness_metric is 'dummy':
             self._get_raw = self._get_dummy_fitness
         elif self.fitness_metric is 'hull_test':
@@ -49,9 +50,10 @@ class FitnessCalculator(object):
             for ind, populum in enumerate(generation):
                 generation[ind]['formation_enthalpy_per_atom'] = np.random.rand() - 0.5
         print('concs', np.shape(get_array_from_cursor(generation, 'concentration')))
-        print('ef', np.shape(get_array_from_cursor(generation, 'formation_enthalpy_per_atom')))
+        print('ef', np.shape(get_array_from_cursor(generation, 'formation_enthalpy_per_atom').reshape(len(generation), 1)))
         structures = np.hstack((get_array_from_cursor(generation, 'concentration'),
-                                get_array_from_cursor(generation, 'formation_enthalpy_per_atom')))
+                                get_array_from_cursor(generation, 'formation_enthalpy_per_atom')
+                                .reshape(len(generation), 1)))
         if self.debug:
             print(structures)
         hull_dist, _, _ = self.hull.get_hull_distances(structures)

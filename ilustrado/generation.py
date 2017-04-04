@@ -32,9 +32,12 @@ class Generation():
         gen_string = 80*'=' + '\n'
         gen_string += 'Number of members: {}\n'.format(len(self.populace))
         gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
+        gen_string += ('{:^10} {:^10} {:^10}\n'
+                       .format('Formula', 'Fitness', 'Hull distance (eV/atom)'))
         for populum in self.populace:
-            gen_string += '{:10} {:5f}\n'.format(get_formula_from_stoich(populum['stoichiometry']),
-                                                 populum['fitness'])
+            gen_string += ('{:10} {:^10.5f} {:^10.5f}\n'
+                           .format(get_formula_from_stoich(populum['stoichiometry']),
+                                   populum['fitness'], populum['raw_fitness']))
         gen_string += 80*'=' + '\n'
         return gen_string
 
@@ -46,7 +49,7 @@ class Generation():
 
     def dump(self, gen_suffix):
         with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
-            json.dump(self.populace, f, sort_keys=True, indent=2)
+            json.dump(self.populace, f, sort_keys=False, indent=2)
 
     def birth(self, populum):
         print('Birthing new structure..')
