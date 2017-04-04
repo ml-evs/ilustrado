@@ -3,7 +3,8 @@ from subprocess import check_output
 
 try:
     __version__ = check_output(["git", "describe", "--tags"]).decode("utf-8").strip()
-    __version__ += '-' + check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode("utf-8").strip()
+    __version__ += '+' + (check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])
+                          .decode('utf-8').strip())
 except:
     __version__ = 'xxx'
 
@@ -15,11 +16,15 @@ setup(name='ilustrado',
       author_email='me388@cam.ac.uk',
       license='MIT',
       packages=find_packages(),
+      test_suite='ilustrado.tests',
       install_requires=[
           'numpy>=1.10',
           'scipy>=0.18',
-        # 'matador', requires a local install of matador
+          # 'matador', requires a local install of matador
           'matplotlib==1.5',
           'seaborn'
       ],
+      extras_require={
+          'matador': ['matador']
+      },
       zip_safe=False)
