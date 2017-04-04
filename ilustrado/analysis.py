@@ -4,9 +4,7 @@
 
 def display_gen(generation):
     """ Print some info about the generation. """
-    print('GENERATION {}'.format(generation.generation_idx))
     print(generation)
-    print('Most fit: {}'.format(generation.most_fit['raw_fitness']))
 
 
 def fitness_swarm_plot(generations):

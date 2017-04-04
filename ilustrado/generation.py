@@ -29,16 +29,20 @@ class Generation():
         return len(self.populace)
 
     def __str__(self):
-        gen_string = 80*'=' + '\n'
+        gen_string = '\nCompleted generation {}:\n'.format(self.generation_idx)
         gen_string += 'Number of members: {}\n'.format(len(self.populace))
         gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
-        gen_string += ('{:^10} {:^10} {:^10}\n'
-                       .format('Formula', 'Fitness', 'Hull distance (eV/atom)'))
+        gen_string += 74*'─' + '\n'
+        gen_string += ('{:^25} {:^10} {:^10} {:^25}\n'
+                       .format('ID', 'Formula', 'Fitness', 'Hull distance (eV/atom)'))
+        gen_string += 74*'─' + '\n'
         for populum in self.populace:
-            gen_string += ('{:10} {:^10.5f} {:^10.5f}\n'
-                           .format(get_formula_from_stoich(populum['stoichiometry']),
+            gen_string += ('{:^25} {:^10} {: ^10.5f} {:^25.5f}\n'
+                           .format(populum['source'][0].split('/')[-1]
+                                   .replace('.res', '').replace('.castep', ''),
+                                   get_formula_from_stoich(populum['stoichiometry']),
                                    populum['fitness'], populum['raw_fitness']))
-        gen_string += 80*'=' + '\n'
+        gen_string += '\n'
         return gen_string
 
     def __getitem__(self, key):
@@ -52,7 +56,6 @@ class Generation():
             json.dump(self.populace, f, sort_keys=False, indent=2)
 
     def birth(self, populum):
-        print('Birthing new structure..')
         self.populace.append(populum)
 
     def rank(self):

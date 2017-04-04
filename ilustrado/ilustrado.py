@@ -10,6 +10,7 @@ from .util import strip_useless
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
 from matador.export import generate_hash
+from matador.utils.chem_utils import get_formula_from_stoich
 # external libraries
 import numpy as np
 # standard library
@@ -58,7 +59,7 @@ class ArtificialSelector(object):
         print('\n' + splash_screen)
         print('\033[0m')
 
-        print('Loading harsh realities of life...')
+        print('Loading harsh realities of life...', end=' ')
         # set GA parameters
         self.population = population  # target size of each generation
         self.num_survivors = num_survivors
@@ -96,7 +97,7 @@ class ArtificialSelector(object):
             self.testing = True
         print('Done!')
 
-        print('Initialising quantum mechanics...')
+        print('Initialising quantum mechanics...', end=' ')
         # read parameters for relaxation from seed files
         if seed is not None:
             self.seed = seed
@@ -112,7 +113,7 @@ class ArtificialSelector(object):
             exit('Not in testing mode, and failed to provide seed... exiting.')
         else:
             self.seed = 'ga_test'
-        print('Done!')
+        print('Done!\n')
         logging.debug('Successfully initialised cell and param files.')
 
         # initialise fitness calculator
@@ -121,7 +122,6 @@ class ArtificialSelector(object):
         logging.debug('Successfully initialised fitness calculator.')
 
         # if gene_pool is None, try to read from res files in cwd
-        print('Seeding generation 0')
         if gene_pool is None:
             res_list = []
             for file in listdir('.'):
@@ -196,6 +196,10 @@ class ArtificialSelector(object):
             free_nodes = self.nodes
         self.max_attempts = 5 * self.population
         attempts = 0
+        print('Computing generation {}:'.format(len(self.generations)))
+        print(59*'─')
+        print('{:^25} {:^10} {:^10} {:^10}'.format('ID', 'Formula', '# atoms', 'Status'))
+        print(59*'─')
         try:
             while len(next_gen) < self.population and attempts < self.max_attempts:
                 # are we using all nodes? if not, start some processes
@@ -253,7 +257,7 @@ class ArtificialSelector(object):
                                     print(proc)
                                     print(dumps(result, sort_keys=True))
                                 if result.get('optimised'):
-
+                                    status = 'Relaxed'
                                     logging.debug('Newborn {} successfully optimised'
                                                   .format(', '.join(newborns[proc[0]]['source'])))
                                     if result.get('parents') is None:
@@ -273,6 +277,14 @@ class ArtificialSelector(object):
 
                                     next_gen.dump('current')
                                     logging.debug('Dumping json file for interim generation...')
+                                else:
+                                    status = 'Failed'
+                                print('{:^25} {:^10} {:^10} {:^10}'
+                                      .format(newborns[proc[0]]['source'][0],
+                                              get_formula_from_stoich(
+                                                  newborns[proc[0]]['stoichiometry']),
+                                              newborns[proc[0]]['num_atoms'],
+                                              status))
                             try:
                                 procs[ind][2].join(timeout=10)
                                 logging.debug('Process {} on node {} died gracefully.'

@@ -49,8 +49,6 @@ class FitnessCalculator(object):
         if self.testing:
             for ind, populum in enumerate(generation):
                 generation[ind]['formation_enthalpy_per_atom'] = np.random.rand() - 0.5
-        print('concs', np.shape(get_array_from_cursor(generation, 'concentration')))
-        print('ef', np.shape(get_array_from_cursor(generation, 'formation_enthalpy_per_atom').reshape(len(generation), 1)))
         structures = np.hstack((get_array_from_cursor(generation, 'concentration'),
                                 get_array_from_cursor(generation, 'formation_enthalpy_per_atom')
                                 .reshape(len(generation), 1)))
