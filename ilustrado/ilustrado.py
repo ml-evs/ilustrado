@@ -91,6 +91,10 @@ class ArtificialSelector(object):
         self.ncores = ncores
         self.nprocs = nprocs
         self.nodes = nodes
+        if self.nodes is not None:
+            self.nprocs = len(self.nodes)
+            if self.nprocs != nprocs and nprocs is not None:
+                logging.warning('Specified procs {} being replaced by number of nodes {}'.format(self.nprocs, nprocs))
         self.initial_nodes = nodes
 
         if self.fitness_metric == 'hull' and self.hull is None:
