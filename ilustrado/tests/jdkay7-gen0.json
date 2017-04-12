@@ -1,0 +1,145 @@
+[
+  {
+    "source": [
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP-chpvm6.res",
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP.cell",
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP.param"
+    ],
+    "external_pressure": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0
+      ]
+    ],
+    "kpoints_mp_spacing": 0.07,
+    "species_pot": {
+      "P": "P_00PBE.usp",
+      "K": "K_00PBE.usp"
+    },
+    "task": "geometryoptimization",
+    "xc_functional": "PBE",
+    "spin_polarized": false,
+    "metals_method": "dm",
+    "cut_off_energy": 300.0,
+    "perc_extra_bands": 40.0,
+    "geom_method": "lbfgs",
+    "finite_basis_corr": "0",
+    "user": "me388",
+    "pressure": -0.033,
+    "cell_volume": 185.000133058,
+    "enthalpy": -2279.51587,
+    "num_atoms": 6,
+    "space_group": "P2_1",
+    "enthalpy_per_atom": -379.9193116666667,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "lattice_abc": [
+      [
+        5.60444978272,
+        5.6642816,
+        6.76300278577
+      ],
+      [
+        90.0,
+        59.507676089,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.60444978272,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026441097096,
+        0.0,
+        5.827660220255057
+      ]
+    ],
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "positions_frac": [
+      [
+        0.997488,
+        0.222082,
+        0.649862
+      ],
+      [
+        0.002512,
+        0.722082,
+        0.350138
+      ],
+      [
+        0.999059,
+        0.843943,
+        0.648808
+      ],
+      [
+        0.000941,
+        0.343943,
+        0.351192
+      ],
+      [
+        0.395491,
+        0.532483,
+        0.796495
+      ],
+      [
+        0.604509,
+        0.032483,
+        0.203505
+      ]
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "num_fu": 2.0,
+    "tags": null,
+    "text_id": [
+      "gestation",
+      "hands"
+    ],
+    "quality": 5,
+    "elems": [
+      "K",
+      "P"
+    ],
+    "enthalpy_per_b": -569.8789675,
+    "cell_volume_per_b": 46.2500332645,
+    "formation_enthalpy_per_atom": -0.40200950000001967,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "gravimetric_capacity": 432.68276702980944,
+    "hull_distance": 0.046268499999972845,
+    "fitness": -1,
+    "raw_fitness": 0.046268499999972845
+  }
+]

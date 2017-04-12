@@ -1,0 +1,1546 @@
+[
+  {
+    "source": [
+      "KP-GA-jdkay7-2x1.castep"
+    ],
+    "parents": [
+      "KP-GA-jdkay7-1x9"
+    ],
+    "mutations": [
+      "nudge_positions",
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.994709,
+        0.220626,
+        0.648097
+      ],
+      [
+        0.999702,
+        0.720016,
+        0.347565
+      ],
+      [
+        0.997553,
+        0.842632,
+        0.646501
+      ],
+      [
+        0.997712,
+        0.342269,
+        0.349889
+      ],
+      [
+        0.394024,
+        0.530404,
+        0.79517
+      ],
+      [
+        0.603221,
+        0.029713,
+        0.20205
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.5154,
+    "enthalpy_per_atom": -379.91923333333335,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": -0.0068,
+    "max_force_on_atom": 0.1138698274346633,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.011588888888888888,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40193116666665674,
+    "hull_distance": 0.04634683333333578,
+    "fitness": 0.9536863229587539,
+    "raw_fitness": 0.04634683333333578
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x2.castep"
+    ],
+    "parents": [
+      "KP-chpvm6"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.997123,
+        0.221579,
+        0.649158
+      ],
+      [
+        0.002008,
+        0.721711,
+        0.349763
+      ],
+      [
+        0.998284,
+        0.843333,
+        0.648478
+      ],
+      [
+        0.000116,
+        0.343532,
+        0.350328
+      ],
+      [
+        0.395276,
+        0.532216,
+        0.796329
+      ],
+      [
+        0.603612,
+        0.031503,
+        0.202877
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51582,
+    "enthalpy_per_atom": -379.91930333333335,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": -0.0145,
+    "max_force_on_atom": 0.04651097289887624,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.011863888888888889,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40200116666665053,
+    "hull_distance": 0.04627683333334198,
+    "fitness": 0.9537561730381169,
+    "raw_fitness": 0.04627683333334198
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x3.castep"
+    ],
+    "parents": [
+      "KP-GA-jdkay7-1x9"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.995611,
+        0.220443,
+        0.648514
+      ],
+      [
+        0.000438,
+        0.72101,
+        0.348639
+      ],
+      [
+        0.998074,
+        0.842879,
+        0.647169
+      ],
+      [
+        0.99873,
+        0.343178,
+        0.350314
+      ],
+      [
+        0.393976,
+        0.530574,
+        0.795106
+      ],
+      [
+        0.603666,
+        0.030653,
+        0.202515
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51565,
+    "enthalpy_per_atom": -379.91927499999997,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": 0.0272,
+    "max_force_on_atom": 0.06511212099140988,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.011691666666666668,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40197283333327505,
+    "hull_distance": 0.04630516666671747,
+    "fitness": 0.9537279003323865,
+    "raw_fitness": 0.04630516666671747
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x4.castep"
+    ],
+    "parents": [
+      "KP-chpvm6"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.996797,
+        0.221237,
+        0.64953
+      ],
+      [
+        0.001696,
+        0.721129,
+        0.349852
+      ],
+      [
+        0.998764,
+        0.843343,
+        0.648008
+      ],
+      [
+        1.1e-05,
+        0.34341,
+        0.351079
+      ],
+      [
+        0.395377,
+        0.532224,
+        0.795588
+      ],
+      [
+        0.604453,
+        0.032283,
+        0.202811
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51571,
+    "enthalpy_per_atom": -379.919285,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": 0.0301,
+    "max_force_on_atom": 0.04876375908397547,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.01181388888888889,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40198283333330664,
+    "hull_distance": 0.04629516666668587,
+    "fitness": 0.953737878925963,
+    "raw_fitness": 0.04629516666668587
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x5.castep"
+    ],
+    "parents": [
+      "KP-GA-jdkay7-1x0"
+    ],
+    "mutations": [
+      "nudge_positions",
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.600999,
+        5.66246,
+        6.757463
+      ],
+      [
+        89.985758,
+        59.544302,
+        89.994415
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6009983,
+        0.0002731,
+        -0.0021258
+      ],
+      [
+        0.0002761,
+        5.6624601,
+        0.000654
+      ],
+      [
+        3.4273791,
+        0.0008399,
+        5.8237766
+      ]
+    ],
+    "cell_volume": 184.744829,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.996006,
+        0.21968,
+        0.648135
+      ],
+      [
+        0.000855,
+        0.720426,
+        0.348699
+      ],
+      [
+        0.997142,
+        0.84201,
+        0.647289
+      ],
+      [
+        0.999257,
+        0.341566,
+        0.348719
+      ],
+      [
+        0.393696,
+        0.53121,
+        0.794978
+      ],
+      [
+        0.602359,
+        0.029818,
+        0.201528
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51572,
+    "enthalpy_per_atom": -379.91928666666666,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": 0.0176,
+    "max_force_on_atom": 0.0804222643302214,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.011688888888888888,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.4019844999999691,
+    "hull_distance": 0.04629350000002341,
+    "fitness": 0.9537395420257806,
+    "raw_fitness": 0.04629350000002341
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x8.castep"
+    ],
+    "parents": [
+      "KP-GA-jdkay7-1x9"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.995524,
+        0.220601,
+        0.648154
+      ],
+      [
+        0.000359,
+        0.72121,
+        0.348074
+      ],
+      [
+        0.99795,
+        0.843093,
+        0.647123
+      ],
+      [
+        0.998777,
+        0.343342,
+        0.350462
+      ],
+      [
+        0.393884,
+        0.530775,
+        0.794695
+      ],
+      [
+        0.603704,
+        0.030426,
+        0.201939
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51533,
+    "enthalpy_per_atom": -379.9192216666667,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": 0.0319,
+    "max_force_on_atom": 0.09395793526892765,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.009474999999999999,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.4019195000000195,
+    "hull_distance": 0.04635849999997299,
+    "fitness": 0.953674681322902,
+    "raw_fitness": 0.04635849999997299
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x6.castep"
+    ],
+    "parents": [
+      "KP-GA-jdkay7-1x6"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.996694,
+        0.220792,
+        0.649516
+      ],
+      [
+        0.001484,
+        0.720847,
+        0.348644
+      ],
+      [
+        0.998122,
+        0.843105,
+        0.647731
+      ],
+      [
+        0.999912,
+        0.342453,
+        0.350557
+      ],
+      [
+        0.394682,
+        0.531779,
+        0.795892
+      ],
+      [
+        0.603166,
+        0.030796,
+        0.202472
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51561,
+    "enthalpy_per_atom": -379.9192683333333,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": -0.033,
+    "max_force_on_atom": 0.07128633529646478,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.009761111111111111,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.4019661666666252,
+    "hull_distance": 0.0463118333333673,
+    "fitness": 0.953721247941837,
+    "raw_fitness": 0.0463118333333673
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x7.castep"
+    ],
+    "parents": [
+      "KP-GA-jdkay7-1x1"
+    ],
+    "mutations": [
+      "nudge_positions",
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.996405,
+        0.219859,
+        0.647597
+      ],
+      [
+        0.001332,
+        0.719084,
+        0.347041
+      ],
+      [
+        0.99661,
+        0.842757,
+        0.646772
+      ],
+      [
+        0.999326,
+        0.340915,
+        0.348407
+      ],
+      [
+        0.393623,
+        0.530413,
+        0.794437
+      ],
+      [
+        0.602826,
+        0.031313,
+        0.20197
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51521,
+    "enthalpy_per_atom": -379.91920166666665,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": -0.0331,
+    "max_force_on_atom": 0.14118604924000103,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.009977777777777778,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40189949999995633,
+    "hull_distance": 0.04637850000003618,
+    "fitness": 0.953654724262035,
+    "raw_fitness": 0.04637850000003618
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x10.castep"
+    ],
+    "parents": [
+      "KP-chpvm6"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.604356,
+        5.664136,
+        6.763512
+      ],
+      [
+        89.995142,
+        59.506979,
+        89.997565
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6043559,
+        0.0001191,
+        0.000186
+      ],
+      [
+        0.0001203,
+        5.6641364,
+        0.0002078
+      ],
+      [
+        3.4318386,
+        0.0002867,
+        5.8281716
+      ]
+    ],
+    "cell_volume": 185.004907,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.997439,
+        0.221286,
+        0.649079
+      ],
+      [
+        0.002463,
+        0.722003,
+        0.349818
+      ],
+      [
+        0.998428,
+        0.843068,
+        0.648484
+      ],
+      [
+        0.000418,
+        0.343737,
+        0.350639
+      ],
+      [
+        0.395367,
+        0.531773,
+        0.795858
+      ],
+      [
+        0.603935,
+        0.032393,
+        0.203478
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51583,
+    "enthalpy_per_atom": -379.91930499999995,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": 0.0123,
+    "max_force_on_atom": 0.03129322450627292,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.00968888888888889,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40200283333325615,
+    "hull_distance": 0.04627516666673637,
+    "fitness": 0.9537578361406983,
+    "raw_fitness": 0.04627516666673637
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-2x13.castep"
+    ],
+    "parents": [
+      "KP-chpvm6"
+    ],
+    "mutations": [
+      "nudge_positions",
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.996732,
+        0.220758,
+        0.649081
+      ],
+      [
+        0.002406,
+        0.721619,
+        0.348334
+      ],
+      [
+        0.998459,
+        0.843754,
+        0.647618
+      ],
+      [
+        0.99981,
+        0.342373,
+        0.350219
+      ],
+      [
+        0.394297,
+        0.53076,
+        0.795751
+      ],
+      [
+        0.603234,
+        0.032234,
+        0.202501
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51526,
+    "enthalpy_per_atom": -379.91921,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": -0.0385,
+    "max_force_on_atom": 0.10738973368064565,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.009527777777777777,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.40190783333332547,
+    "hull_distance": 0.046370166666667045,
+    "fitness": 0.9536630396995772,
+    "raw_fitness": 0.046370166666667045
+  },
+  {
+    "source": [
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP-chpvm6.res",
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP.cell",
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP.param"
+    ],
+    "external_pressure": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0
+      ]
+    ],
+    "kpoints_mp_spacing": 0.07,
+    "species_pot": {
+      "P": "P_00PBE.usp",
+      "K": "K_00PBE.usp"
+    },
+    "task": "geometryoptimization",
+    "xc_functional": "PBE",
+    "spin_polarized": false,
+    "metals_method": "dm",
+    "cut_off_energy": 300.0,
+    "perc_extra_bands": 40.0,
+    "geom_method": "lbfgs",
+    "finite_basis_corr": "0",
+    "user": "me388",
+    "pressure": -0.033,
+    "cell_volume": 185.000133058,
+    "enthalpy": -2279.51587,
+    "num_atoms": 6,
+    "space_group": "P2_1",
+    "enthalpy_per_atom": -379.9193116666667,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "lattice_abc": [
+      [
+        5.60444978272,
+        5.6642816,
+        6.76300278577
+      ],
+      [
+        90.0,
+        59.507676089,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.60444978272,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026441097096,
+        0.0,
+        5.827660220255057
+      ]
+    ],
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "positions_frac": [
+      [
+        0.997488,
+        0.222082,
+        0.649862
+      ],
+      [
+        0.002512,
+        0.722082,
+        0.350138
+      ],
+      [
+        0.999059,
+        0.843943,
+        0.648808
+      ],
+      [
+        0.000941,
+        0.343943,
+        0.351192
+      ],
+      [
+        0.395491,
+        0.532483,
+        0.796495
+      ],
+      [
+        0.604509,
+        0.032483,
+        0.203505
+      ]
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "num_fu": 2.0,
+    "tags": null,
+    "text_id": [
+      "gestation",
+      "hands"
+    ],
+    "quality": 5,
+    "elems": [
+      "K",
+      "P"
+    ],
+    "enthalpy_per_b": -569.8789675,
+    "cell_volume_per_b": 46.2500332645,
+    "formation_enthalpy_per_atom": -0.40200950000001967,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "gravimetric_capacity": 432.68276702980944,
+    "hull_distance": 0.046268499999972845,
+    "fitness": 0.9537644885539275,
+    "raw_fitness": 0.046268499999972845
+  },
+  {
+    "source": [
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP-chpvm6.res",
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP.cell",
+      "/home/users/me388/proj/KPX/K+P/results/KP-300-0.07-searches_II/KP.param"
+    ],
+    "external_pressure": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0
+      ]
+    ],
+    "kpoints_mp_spacing": 0.07,
+    "species_pot": {
+      "P": "P_00PBE.usp",
+      "K": "K_00PBE.usp"
+    },
+    "task": "geometryoptimization",
+    "xc_functional": "PBE",
+    "spin_polarized": false,
+    "metals_method": "dm",
+    "cut_off_energy": 300.0,
+    "perc_extra_bands": 40.0,
+    "geom_method": "lbfgs",
+    "finite_basis_corr": "0",
+    "user": "me388",
+    "pressure": -0.033,
+    "cell_volume": 185.000133058,
+    "enthalpy": -2279.51587,
+    "num_atoms": 6,
+    "space_group": "P2_1",
+    "enthalpy_per_atom": -379.9193116666667,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "lattice_abc": [
+      [
+        5.60444978272,
+        5.6642816,
+        6.76300278577
+      ],
+      [
+        90.0,
+        59.507676089,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.60444978272,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026441097096,
+        0.0,
+        5.827660220255057
+      ]
+    ],
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "positions_frac": [
+      [
+        0.997488,
+        0.222082,
+        0.649862
+      ],
+      [
+        0.002512,
+        0.722082,
+        0.350138
+      ],
+      [
+        0.999059,
+        0.843943,
+        0.648808
+      ],
+      [
+        0.000941,
+        0.343943,
+        0.351192
+      ],
+      [
+        0.395491,
+        0.532483,
+        0.796495
+      ],
+      [
+        0.604509,
+        0.032483,
+        0.203505
+      ]
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "num_fu": 2.0,
+    "tags": null,
+    "text_id": [
+      "gestation",
+      "hands"
+    ],
+    "quality": 5,
+    "elems": [
+      "K",
+      "P"
+    ],
+    "enthalpy_per_b": -569.8789675,
+    "cell_volume_per_b": 46.2500332645,
+    "formation_enthalpy_per_atom": -0.40200950000001967,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "gravimetric_capacity": 432.68276702980944,
+    "hull_distance": 0.046268499999972845,
+    "fitness": 0.9537644885539275,
+    "raw_fitness": 0.046268499999972845
+  },
+  {
+    "source": [
+      "KP-GA-jdkay7-1x6.castep"
+    ],
+    "parents": [
+      "KP-chpvm6"
+    ],
+    "mutations": [
+      "nudge_positions"
+    ],
+    "elems": [
+      "K",
+      "P"
+    ],
+    "stoichiometry": [
+      [
+        "P",
+        2.0
+      ],
+      [
+        "K",
+        1.0
+      ]
+    ],
+    "lattice_abc": [
+      [
+        5.60445,
+        5.664282,
+        6.763003
+      ],
+      [
+        90.0,
+        59.507676,
+        90.0
+      ]
+    ],
+    "lattice_cart": [
+      [
+        5.6044498,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        5.6642816,
+        0.0
+      ],
+      [
+        3.4317026,
+        0.0,
+        5.8276602
+      ]
+    ],
+    "cell_volume": 185.000133,
+    "space_group": "P1",
+    "positions_frac": [
+      [
+        0.997002,
+        0.221319,
+        0.649573
+      ],
+      [
+        0.001652,
+        0.721445,
+        0.349394
+      ],
+      [
+        0.999007,
+        0.843125,
+        0.648508
+      ],
+      [
+        0.000728,
+        0.343394,
+        0.350904
+      ],
+      [
+        0.394943,
+        0.532288,
+        0.79597
+      ],
+      [
+        0.604091,
+        0.031547,
+        0.202515
+      ]
+    ],
+    "num_atoms": 6,
+    "atom_types": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "K",
+      "K"
+    ],
+    "enthalpy": -2279.51569,
+    "enthalpy_per_atom": -379.9192816666667,
+    "total_energy": -2273.410865609086,
+    "total_energy_per_atom": -378.9018109348477,
+    "pressure": -0.0319,
+    "max_force_on_atom": 0.08025306536201592,
+    "optimised": true,
+    "date": "12-4-2017",
+    "total_time_hrs": 0.010075,
+    "peak_mem_MB": 144,
+    "concentration": [
+      0.3333333333333333
+    ],
+    "formation_enthalpy_per_atom": -0.4019794999999817,
+    "hull_distance": 0.04629850000001079,
+    "fitness": 0.9537345527270972,
+    "raw_fitness": 0.04629850000001079
+  }
+]
