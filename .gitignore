@@ -7,7 +7,6 @@ KP-*
 completed/
 input/
 bad_castep/
-*.json
 *.pdf
 *.log
-
+*.json
