@@ -91,11 +91,6 @@ class ArtificialSelector(object):
         self.ncores = ncores
         self.nprocs = nprocs
         self.nodes = nodes
-        if self.nodes is not None:
-            self.nprocs = len(self.nodes)
-            if self.nprocs != nprocs and nprocs is not None:
-                logging.warning('Specified procs {} being replaced by number of nodes {}'.format(self.nprocs, nprocs))
-        self.initial_nodes = nodes
 
         if self.fitness_metric == 'hull' and self.hull is None:
             exit('Need to pass a QueryConvexHull object to use hull distance metric.')
@@ -116,6 +111,12 @@ class ArtificialSelector(object):
                             filename=self.run_hash+'.log',
                             level=numeric_loglevel)
         logging.info('Starting up ilustrado {}'.format(__version__))
+
+        if self.nodes is not None:
+            self.nprocs = len(self.nodes)
+            if self.nprocs != nprocs and nprocs is not None:
+                logging.warning('Specified procs {} being replaced by number of nodes {}'.format(self.nprocs, nprocs))
+        self.initial_nodes = nodes
 
         if self.recover_from is not None:
             if isinstance(self.recover_from, str):
