@@ -6,6 +6,8 @@ from .generation import Generation
 from .fitness import FitnessCalculator
 from .analysis import display_gen, fitness_swarm_plot
 from .util import strip_useless
+from pkg_resources import require
+__version__ = require('matador')[0].version
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
@@ -109,6 +111,7 @@ class ArtificialSelector(object):
         logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
                             filename=self.run_hash+'.log',
                             level=numeric_loglevel)
+        logging.info('Starting up ilustrado {}'.format(__version__))
 
         if self.recover_from is not None:
             if isinstance(self.recover_from, str):
