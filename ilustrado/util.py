@@ -1,5 +1,6 @@
 # coding: utf-8
 """ Catch-all file for utility functions. """
+import numpy as np
 
 
 def strip_useless(doc):
@@ -14,4 +15,6 @@ def strip_useless(doc):
             'date', 'total_time_hrs', 'peak_mem_MB']
     for key in keys:
         stripped_doc[key] = doc[key]
+        if isinstance(doc[key], np.ndarray):
+            stripped_doc[key] = doc[key].tolist()
     return stripped_doc
