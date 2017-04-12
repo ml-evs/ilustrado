@@ -34,16 +34,16 @@ class Generation():
         gen_string = '\nCompleted generation {}:\n'.format(self.generation_idx)
         gen_string += 'Number of members: {}\n'.format(len(self.populace))
         gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
-        gen_string += 74*'─' + '\n'
-        gen_string += ('{:^25} {:^10} {:^10} {:^25}\n'
-                       .format('ID', 'Formula', 'Fitness', 'Hull distance (eV/atom)'))
-        gen_string += 74*'─' + '\n'
+        gen_string += 84*'─' + '\n'
+        gen_string += ('{:^10} {:^10} {:^25} {:^35}\n'
+                       .format('Formula', 'Fitness', 'Hull distance (eV/atom)', 'ID'))
+        gen_string += 84*'─' + '\n'
         for populum in self.populace:
-            gen_string += ('{:^25} {:^10} {: ^10.5f} {:^25.5f}\n'
-                           .format(populum['source'][0].split('/')[-1]
-                                   .replace('.res', '').replace('.castep', ''),
-                                   get_formula_from_stoich(populum['stoichiometry']),
-                                   populum['fitness'], populum['raw_fitness']))
+            gen_string += ('{:^10} {: ^10.5f} {:^25.5f} {:^35}\n'
+                           .format(get_formula_from_stoich(populum['stoichiometry']),
+                                   populum['fitness'], populum['raw_fitness'],
+                                   populum['source'][0].split('/')[-1]
+                                   .replace('.res', '').replace('.castep', '')))
         gen_string += '\n'
         return gen_string
 
