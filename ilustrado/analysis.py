@@ -9,6 +9,8 @@ def display_gen(generation):
 
 def fitness_swarm_plot(generations):
     """ Make a swarm plot of the fitness of all generations. """
+    import matplotlib
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import seaborn as sns
     import numpy as np

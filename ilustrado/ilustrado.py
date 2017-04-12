@@ -97,7 +97,6 @@ class ArtificialSelector(object):
             self.testing = True
         print('Done!')
 
-        print(self.recover_from)
         if self.recover_from is not None:
             if isinstance(self.recover_from, str):
                 self.run_hash = self.recover_from
