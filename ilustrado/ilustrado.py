@@ -277,6 +277,7 @@ class ArtificialSelector(object):
                                     logging.debug('Dumping json file for interim generation...')
                                 else:
                                     status = 'Failed'
+                                    result = strip_useless(result)
                                     with open('failed.json', 'a') as f:
                                         dump(f, result)
                                 print('{:^25} {:^10} {:^10} {:^10} {:^30}'
