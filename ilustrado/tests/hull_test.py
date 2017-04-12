@@ -44,6 +44,8 @@ def hull_test():
                        fitness_metric='hull',
                        nprocs=cpus,
                        ncores=1,
+                       mutations=['null_nudge_positions'],
+                       max_num_mutations=1,
                        mutation_rate=1, crossover_rate=0,
                        num_generations=10, population=10,
                        num_survivors=10, elitism=0.3,
