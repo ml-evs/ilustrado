@@ -92,16 +92,9 @@ class ArtificialSelector(object):
         self.nprocs = nprocs
         self.nodes = nodes
 
-        if self.fitness_metric == 'hull' and self.hull is None:
-            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
-        if self.fitness_metric in ['dummy', 'hull_test']:
-            self.testing = True
-        print('Done!')
-
         if self.recover_from is not None:
             if isinstance(self.recover_from, str):
                 self.run_hash = self.recover_from
-                print('Attempting to recover from run {}'.format(self.run_hash))
 
         # set up logging
         numeric_loglevel = getattr(logging, loglevel.upper(), None)
@@ -119,6 +112,7 @@ class ArtificialSelector(object):
         self.initial_nodes = nodes
 
         if self.recover_from is not None:
+            print('Attempting to recover from run {}'.format(self.run_hash))
             if isinstance(self.recover_from, str):
                 logging.info('Attempting to recover from previous run {}'.format(self.run_hash))
             self.recover()
@@ -143,6 +137,11 @@ class ArtificialSelector(object):
         logging.debug('Successfully initialised cell and param files.')
 
         # initialise fitness calculator
+        if self.fitness_metric == 'hull' and self.hull is None:
+            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
+        if self.fitness_metric in ['dummy', 'hull_test']:
+            self.testing = True
+        print('Done!')
         self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
                                                     hull=self.hull, debug=self.debug)
         logging.debug('Successfully initialised fitness calculator.')
@@ -279,8 +278,8 @@ class ArtificialSelector(object):
                                 else:
                                     status = 'Failed'
                                     result = strip_useless(result)
-                                    with open('failed.json', 'a') as f:
-                                        dump(f, result)
+                                    with open(self.run_hash+'-failed.json', 'a') as f:
+                                        dump(result, f)
                                 print('{:^25} {:^10} {:^10} {:^10} {:^30}'
                                       .format(newborns[proc[0]]['source'][0],
                                               get_formula_from_stoich(

@@ -19,7 +19,8 @@ def strip_useless(doc):
             'pressure', 'max_force_on_atom', 'optimised',
             'date', 'total_time_hrs', 'peak_mem_MB']
     for key in keys:
-        stripped_doc[key] = doc[key]
-        if isinstance(doc[key], np.ndarray):
-            stripped_doc[key] = doc[key].tolist()
+        if key in doc:
+            stripped_doc[key] = doc[key]
+            if isinstance(doc[key], np.ndarray):
+                stripped_doc[key] = doc[key].tolist()
     return stripped_doc
