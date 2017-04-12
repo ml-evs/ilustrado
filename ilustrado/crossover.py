@@ -1,6 +1,7 @@
 # coding: utf-8
 """ This file implements crossover functionality. """
 import numpy as np
+from matador.utils.chem_utils import get_stoich
 
 
 def crossover(parents, method='random_slice', debug=False):

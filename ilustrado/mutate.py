@@ -7,7 +7,8 @@ TO-DO: fix metadata of mutated structures, e.g. sources.
 """
 import numpy as np
 from copy import deepcopy
-from matador.utils.cell_utils import cart2abc, get_stoich
+from matador.utils.cell_utils import cart2abc
+from matador.utils.chem_utils import get_stoich
 from traceback import print_exc
 from sys import exit
 from bson.json_util import dumps
