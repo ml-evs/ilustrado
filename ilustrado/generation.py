@@ -15,7 +15,7 @@ class Generation():
     """ Stores each generation of structures. """
 
     def __init__(self, run_hash, generation_idx, num_survivors,
-                 populace=None, fitness_calculator=None):
+                 populace=None, dumpfile=None, fitness_calculator=None):
 
         self.populace = []
         if populace is not None:
@@ -24,6 +24,8 @@ class Generation():
         self._fitness_calculator = fitness_calculator
         self.run_hash = run_hash
         self.generation_idx = generation_idx
+        if dumpfile is not None:
+            self.load(dumpfile)
 
     def __len__(self):
         return len(self.populace)
@@ -54,6 +56,11 @@ class Generation():
     def dump(self, gen_suffix):
         with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
             json.dump(self.populace, f, sort_keys=False, indent=2)
+
+    def load(self, gen_fname):
+        with open(gen_fname, mode='r') as f:
+            populace = json.load(f)
+        self.populace = populace
 
     def birth(self, populum):
         self.populace.append(populum)

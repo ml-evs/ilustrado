@@ -5,25 +5,25 @@ mutations.
 TO-DO: fix metadata of mutated structures, e.g. sources.
 
 """
-import random
 import numpy as np
 from copy import deepcopy
-from matador.utils.cell_utils import cart2abc
+from matador.utils.cell_utils import cart2abc, get_stoich
 from traceback import print_exc
 from sys import exit
 from bson.json_util import dumps
-from collections import defaultdict
-from math import gcd
 
 
-def mutate(parent, debug=False):
+def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     """ Wrap _mutate to check for null/invalid mutations. """
 
     mutant = deepcopy(parent)
     attempts = 0
     try:
         while parent == mutant:
-            _mutate(mutant)
+            _mutate(mutant,
+                    mutations=mutations,
+                    max_num_mutations=max_num_mutations,
+                    debug=debug)
             attempts += 1
     except:
         print_exc()
@@ -41,12 +41,17 @@ def mutate(parent, debug=False):
     return mutant
 
 
-def _mutate(mutant, debug=False):
+def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
     """ Choose a random mutation and apply it. """
     debug = debug
-    # possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
-    possible_mutations = [nudge_positions]
-    num_mutations = random.randint(1, 2)
+    if mutations is None:
+        possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
+    else:
+        possible_mutations = mutations
+    if max_num_mutations == 1:
+        num_mutations = 1
+    else:
+        num_mutations = np.random.randint(1, max_num_mutations)
     # num_mutations = 1
     if debug:
         print('num_mutations', num_mutations)
@@ -54,7 +59,7 @@ def _mutate(mutant, debug=False):
     mutations = []
     mutant['mutations'] = []
     for i in range(num_mutations):
-        mutation = possible_mutations[random.randint(0, len(possible_mutations)-1)]
+        mutation = np.random.choice(possible_mutations)
         mutations.append(mutation)
         mutant['mutations'].append(str(mutation).split(' ')[1])
     # apply successive mutations to mutant
@@ -76,10 +81,10 @@ def permute_atoms(mutant, debug=False):
         return mutant
 
     # choose atoms to swap
-    idx_a = random.randint(0, num_atoms-1)
+    idx_a = np.random.randint(0, num_atoms-1)
     idx_b = idx_a
     while mutant['atom_types'][idx_a] == mutant['atom_types'][idx_b]:
-        idx_b = random.randint(0, num_atoms-1)
+        idx_b = np.random.randint(0, num_atoms-1)
 
     # swap atoms
     if debug:
@@ -93,12 +98,9 @@ def permute_atoms(mutant, debug=False):
 
 
 def vacancy(mutant, debug=False):
-    """ Remove a random atom from the structure.
+    """ Remove a random atom from the structure. """
 
-    TO-DO: farm out stoich calc to matador.
-    """
-
-    vacancy_idx = random.randint(0, mutant['num_atoms']-1)
+    vacancy_idx = np.random.randint(0, mutant['num_atoms']-1)
     if debug:
         print('Removing atom {} of type {} from cell.'.format(vacancy_idx,
                                                               mutant['atom_types'][vacancy_idx]))
@@ -110,32 +112,7 @@ def vacancy(mutant, debug=False):
         pass
     mutant['num_atoms'] = len(mutant['atom_types'])
     # calculate stoichiometry
-    mutant['stoichiometry'] = defaultdict(float)
-    for atom in mutant['atom_types']:
-        if atom not in mutant['stoichiometry']:
-            mutant['stoichiometry'][atom] = 0
-        mutant['stoichiometry'][atom] += 1
-    gcd_val = 0
-    for atom in mutant['atom_types']:
-        if gcd_val == 0:
-            gcd_val = mutant['stoichiometry'][atom]
-        else:
-            gcd_val = gcd(mutant['stoichiometry'][atom], gcd_val)
-    # convert stoichiometry to tuple for fryan
-    temp_stoich = []
-    try:
-        for key, value in mutant['stoichiometry'].items():
-            if float(value)/gcd_val % 1 != 0:
-                temp_stoich.append([key, float(value)/gcd_val])
-            else:
-                temp_stoich.append([key, value/gcd_val])
-    except AttributeError:
-        for key, value in mutant['stoichiometry'].iteritems():
-            if float(value)/gcd_val % 1 != 0:
-                temp_stoich.append([key, float(value)/gcd_val])
-            else:
-                temp_stoich.append([key, value/gcd_val])
-    mutant['stoichiometry'] = temp_stoich
+    mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
 
 
 def random_strain(mutant, debug=False):
@@ -191,7 +168,7 @@ def random_strain(mutant, debug=False):
         print('cell_transform_matrix:', cell_transform_matrix.tolist())
 
 
-def nudge_positions(mutant, amplitude=0.001, debug=False):
+def nudge_positions(mutant, amplitude=0.1, debug=False):
     """ Apply Gaussian noise to all atomic positions. """
     new_positions_frac = np.array(mutant['positions_frac'])
     for ind, atom in enumerate(mutant['positions_frac']):
@@ -203,3 +180,10 @@ def nudge_positions(mutant, amplitude=0.001, debug=False):
             elif new_positions_frac[ind][i] < 0:
                 new_positions_frac[ind][i] += 1
     mutant['positions_frac'] = new_positions_frac.tolist()
+
+
+def null_nudge_positions(mutant, debug=False):
+    """ Apply minimal Gaussian noise to all atomic positions, mostly
+    for testing purposes.
+    """
+    nudge_positions(mutant, amplitude=0.001)

@@ -15,6 +15,7 @@ from matador.utils.chem_utils import get_formula_from_stoich
 import numpy as np
 # standard library
 from os import listdir
+from os.path import isfile
 from time import sleep
 import multiprocessing as mp
 from traceback import print_exc
@@ -42,8 +43,10 @@ class ArtificialSelector(object):
                  elitism=0.2,
                  ncores=None,
                  nprocs=1,
+                 mutations=None,
+                 max_num_mutations=3,
                  nodes=None,
-                 recover=False,
+                 recover_from=None,
                  debug=False,
                  loglevel='info'):
         """ Initialise parameters, gene pool and begin GA. """
@@ -72,16 +75,33 @@ class ArtificialSelector(object):
         self.fitness_metric = fitness_metric  # choose method of ranking structures
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
+        self.mutations = mutations
+        if self.mutations is not None and isinstance(self.mutations, str):
+            self.mutations = [self.mutations]
+        self.max_num_mutations = max_num_mutations
+        assert isinstance(self.max_num_mutations, int)
 
         # set up logistics
         self.run_hash = generate_hash()
-        self.recover = recover  # recover from previous run
+        self.recover_from = recover_from  # recover from previous run with this hash
         self.debug = debug
         self.testing = False
         self.ncores = ncores
         self.nprocs = nprocs
         self.nodes = nodes
         self.initial_nodes = nodes
+
+        if self.fitness_metric == 'hull' and self.hull is None:
+            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
+        if self.fitness_metric in ['dummy', 'hull_test']:
+            self.testing = True
+        print('Done!')
+
+        print(self.recover_from)
+        if self.recover_from is not None:
+            if isinstance(self.recover_from, str):
+                self.run_hash = self.recover_from
+                print('Attempting to recover from run {}'.format(self.run_hash))
 
         # set up logging
         numeric_loglevel = getattr(logging, loglevel.upper(), None)
@@ -91,11 +111,10 @@ class ArtificialSelector(object):
                             filename=self.run_hash+'.log',
                             level=numeric_loglevel)
 
-        if self.fitness_metric == 'hull' and self.hull is None:
-            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
-        if self.fitness_metric in ['dummy', 'hull_test']:
-            self.testing = True
-        print('Done!')
+        if self.recover_from is not None:
+            if isinstance(self.recover_from, str):
+                logging.info('Attempting to recover from previous run {}'.format(self.run_hash))
+            self.recover()
 
         print('Initialising quantum mechanics...', end=' ')
         # read parameters for relaxation from seed files
@@ -121,43 +140,8 @@ class ArtificialSelector(object):
                                                     hull=self.hull, debug=self.debug)
         logging.debug('Successfully initialised fitness calculator.')
 
-        # if gene_pool is None, try to read from res files in cwd
-        if gene_pool is None:
-            res_list = []
-            for file in listdir('.'):
-                if file.endswith('.res'):
-                    res_list.append(file)
-            self.gene_pool = []
-            for file in res_list:
-                doc, s = res2dict(file)
-        else:
-            # else, expect a list of matador documents
-            self.gene_pool = gene_pool
-            for ind, parent in enumerate(self.gene_pool):
-                del self.gene_pool[ind]['_id']
-                self.gene_pool[ind]['fitness'] = -1
-                self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
-
-        # check gene pool is sensible
-        try:
-            assert isinstance(self.gene_pool, list)
-            assert isinstance(self.gene_pool[0], dict)
-            assert len(self.gene_pool) >= 1
-        except:
-            print_exc()
-            exit('Initial gene pool is not sensible, exiting...')
-
-        # generation 0 is initial gene pool
-        self.generations.append(Generation(self.run_hash,
-                                           0,
-                                           self.num_survivors,
-                                           fitness_calculator=None,
-                                           populace=self.gene_pool))
-
-        logging.info('Successfully initialised generation 0 with {} members'
-                     .format(len(self.generations[-1])))
-
-        print(self.generations[-1])
+        if self.recover_from is None:
+            self.seed_generation_0(gene_pool)
 
         if self.debug:
             print(self.nodes)
@@ -166,12 +150,18 @@ class ArtificialSelector(object):
         else:
             logging.debug('Running on local machine')
 
+        if self.debug:
+            print('Current number of generations: {}. Target number: {}'.format(len(self.generations), self.num_generations))
         # run GA self.num_generations
         while len(self.generations) < self.num_generations:
             self.breed_generation()
             logging.info('Successfully bred generation {}'.format(len(self.generations)))
             fitness_swarm_plot(self.generations)
 
+        assert len(self.generations) == self.num_generations
+        print('Reached target number of generations!')
+        print('Completed GA!')
+        logging.info('Reached target number of generations!')
         logging.info('Completed GA!')
         # plot simple fitness graph
         fitness_swarm_plot(self.generations)
@@ -210,6 +200,8 @@ class ArtificialSelector(object):
                     newborn = adapt(possible_parents,
                                     self.mutation_rate,
                                     self.crossover_rate,
+                                    mutations=self.mutations,
+                                    max_num_mutations=self.max_num_mutations,
                                     debug=self.debug)
                     # set source of newborn
                     newborn['source'] = ['{}-GA-{}-{}x{}'.format(self.seed,
@@ -347,8 +339,68 @@ class ArtificialSelector(object):
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
         display_gen(self.generations[-1])
 
-    def recover(self, run_hash):
+    def recover(self):
         """ Attempt to recover previous generations from files in cwd
         named '<run_hash>_gen{}.json'.format(gen_idx).
         """
-        raise NotImplementedError
+        try:
+            i = 0
+            while isfile('{}-gen{}.json'.format(self.run_hash, i)):
+                logging.info('Trying to load generation {} from run {}.'.format(i, self.run_hash))
+                fname = '{}-gen{}.json'.format(self.run_hash, i)
+                self.generations.append(Generation(self.run_hash,
+                                                   i,
+                                                   self.num_survivors,
+                                                   dumpfile=fname,
+                                                   fitness_calculator=None))
+                logging.info('Successfully loaded generation {} from run {}.'.format(i, self.run_hash))
+                i += 1
+            print('Recovered from run {}'.format(self.run_hash))
+            logging.info('Successfully loaded run {}.'.format(self.run_hash))
+        except:
+            print_exc()
+            exit('Something went wrong when reloading run {}'.format(self.run_hash))
+            logging.error('Something went wrong when reloading run {}'.format(self.run_hash))
+        assert len(self.generations) > 1
+        return
+
+    def seed_generation_0(self, gene_pool):
+        """ Set up first generation from gene pool. """
+        # if gene_pool is None, try to read from res files in cwd
+        if gene_pool is None:
+            res_list = []
+            for file in listdir('.'):
+                if file.endswith('.res'):
+                    res_list.append(file)
+            self.gene_pool = []
+            for file in res_list:
+                doc, s = res2dict(file)
+        else:
+            # else, expect a list of matador documents
+            self.gene_pool = gene_pool
+            for ind, parent in enumerate(self.gene_pool):
+                del self.gene_pool[ind]['_id']
+                self.gene_pool[ind]['fitness'] = -1
+                self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
+
+        # check gene pool is sensible
+        try:
+            assert isinstance(self.gene_pool, list)
+            assert isinstance(self.gene_pool[0], dict)
+            assert len(self.gene_pool) >= 1
+        except:
+            print_exc()
+            exit('Initial gene pool is not sensible, exiting...')
+
+        self.generations.append(Generation(self.run_hash,
+                                           0,
+                                           self.num_survivors,
+                                           fitness_calculator=None,
+                                           populace=self.gene_pool))
+
+        logging.info('Successfully initialised generation 0 with {} members'
+                     .format(len(self.generations[-1])))
+        self.generations[0].dump(0)
+
+        print(self.generations[-1])
+        return

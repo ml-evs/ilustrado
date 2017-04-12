@@ -6,7 +6,7 @@ import numpy as np
 import logging
 
 
-def adapt(possible_parents, mutation_rate, crossover_rate, debug=False):
+def adapt(possible_parents, mutation_rate, crossover_rate, mutations=None, max_num_mutations=3, debug=False):
     """ Take a list of possible parents and adapt
     according to given mutation weightings.
     """
@@ -18,10 +18,31 @@ def adapt(possible_parents, mutation_rate, crossover_rate, debug=False):
     crossover_rate /= total_rate
     assert mutation_rate + crossover_rate == 1.0
     mutation_rand_seed = np.random.rand()
+    # turn specified mutations string into corresponding functions
+    if mutations is not None:
+        _mutations = []
+        from .mutate import nudge_positions, null_nudge_positions, permute_atoms, random_strain, vacancy
+        for mutation in mutations:
+            if mutation is 'nudge_positions':
+                _mutations.append(nudge_positions)
+            elif mutation is 'null_nudge_positions':
+                _mutations.append(null_nudge_positions)
+            elif mutation is 'permute_atoms':
+                _mutations.append(permute_atoms)
+            elif mutation is 'random_strain':
+                _mutations.append(random_strain)
+            elif mutation is 'vacancy':
+                _mutations.append(vacancy)
+    else:
+        _mutations = None
+
     # if random number is less than mutant rate, then mutate
     if mutation_rand_seed < mutation_rate:
         parent = np.random.choice(possible_parents)
-        newborn = mutate(parent, debug=debug)
+        newborn = mutate(parent,
+                         mutations=_mutations,
+                         max_num_mutations=max_num_mutations,
+                         debug=debug)
         parents = [parent]
     # otherwise, do crossover
     else:
