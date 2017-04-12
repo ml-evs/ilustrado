@@ -193,9 +193,9 @@ class ArtificialSelector(object):
         self.max_attempts = 5 * self.population
         attempts = 0
         print('Computing generation {}:'.format(len(self.generations)))
-        print(59*'─')
-        print('{:^25} {:^10} {:^10} {:^10}'.format('ID', 'Formula', '# atoms', 'Status'))
-        print(59*'─')
+        print(89*'─')
+        print('{:^25} {:^10} {:^10} {:^10} {:^30}'.format('ID', 'Formula', '# atoms', 'Status', 'Mutations'))
+        print(89*'─')
         try:
             while len(next_gen) < self.population and attempts < self.max_attempts:
                 # are we using all nodes? if not, start some processes
@@ -277,12 +277,13 @@ class ArtificialSelector(object):
                                     logging.debug('Dumping json file for interim generation...')
                                 else:
                                     status = 'Failed'
-                                print('{:^25} {:^10} {:^10} {:^10}'
+                                print('{:^25} {:^10} {:^10} {:^10} {:^30}'
                                       .format(newborns[proc[0]]['source'][0],
                                               get_formula_from_stoich(
                                                   newborns[proc[0]]['stoichiometry']),
                                               newborns[proc[0]]['num_atoms'],
-                                              status))
+                                              status,
+                                              ', '.join(newborns[proc[0]]['mutations'])))
                             try:
                                 procs[ind][2].join(timeout=10)
                                 logging.debug('Process {} on node {} died gracefully.'
