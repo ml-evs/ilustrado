@@ -21,7 +21,7 @@ from os.path import isfile
 from time import sleep
 import multiprocessing as mp
 from traceback import print_exc
-from json import dumps
+from json import dumps, dump
 from sys import exit
 from copy import deepcopy
 import logging
@@ -277,6 +277,8 @@ class ArtificialSelector(object):
                                     logging.debug('Dumping json file for interim generation...')
                                 else:
                                     status = 'Failed'
+                                    with open('failed.json', 'a') as f:
+                                        dump(f, result)
                                 print('{:^25} {:^10} {:^10} {:^10} {:^30}'
                                       .format(newborns[proc[0]]['source'][0],
                                               get_formula_from_stoich(
