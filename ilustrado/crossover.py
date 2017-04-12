@@ -38,6 +38,7 @@ def random_slice(parents):
     # check child is sensible
     child['mutations'] = ['crossover']
     child['stoichiometry'] = get_stoich(child['atom_types'])
+    child['num_atoms'] = len(child['atom_types'])
     return child
 
 

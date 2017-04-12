@@ -1,5 +1,10 @@
 # coding: utf-8
-""" Catch-all file for utility functions. """
+""" Catch-all file for utility functions.
+
+TO-DO:
+
+    * structure validation
+"""
 import numpy as np
 
 
