@@ -95,7 +95,7 @@ def check_feasible(mutant, parents):
 
         * number density within 25% of pre-mutation/birth level,
         * no overlapping atoms,
-        * cell angles between 60 and 120 degrees,
+        * cell angles between 50 and 130 degrees,
         * fewer than max_num_atoms in the cell.
 
     Input:
@@ -141,10 +141,10 @@ def check_feasible(mutant, parents):
     if 'lattice_abc' not in mutant:
         mutant['lattice_abc'] = cart2abc(mutant['lattice_cart'])
     for i in range(3):
-        if mutant['lattice_abc'][1][i] < 60:
+        if mutant['lattice_abc'][1][i] < 50:
             logging.debug('Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations'])))
             return False
-        elif mutant['lattice_abc'][1][i] > 120:
+        elif mutant['lattice_abc'][1][i] > 130:
             logging.debug('Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations'])))
             return False
     return True
