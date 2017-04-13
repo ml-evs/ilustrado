@@ -60,4 +60,4 @@ class MatadorHullUnitTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    hull_test()
+    unittest.main()
