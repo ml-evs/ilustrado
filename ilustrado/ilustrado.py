@@ -47,6 +47,7 @@ class ArtificialSelector(object):
                  nprocs=1,
                  mutations=None,
                  max_num_mutations=3,
+                 max_num_atoms=40,
                  nodes=None,
                  recover_from=None,
                  debug=False,
@@ -82,6 +83,8 @@ class ArtificialSelector(object):
             self.mutations = [self.mutations]
         self.max_num_mutations = max_num_mutations
         assert isinstance(self.max_num_mutations, int)
+        self.max_num_atoms = max_num_atoms
+        assert isinstance(self.max_num_atoms, int)
 
         # set up logistics
         self.run_hash = generate_hash()
@@ -189,7 +192,7 @@ class ArtificialSelector(object):
         if self.nodes is None:
             free_nodes = self.nprocs * [None]
         else:
-            free_nodes = self.nodes
+            free_nodes = deepcopy(self.nodes)
         self.max_attempts = 5 * self.population
         attempts = 0
         print('Computing generation {}:'.format(len(self.generations)))
@@ -208,6 +211,7 @@ class ArtificialSelector(object):
                                     self.crossover_rate,
                                     mutations=self.mutations,
                                     max_num_mutations=self.max_num_mutations,
+                                    max_num_atoms=self.max_num_atoms,
                                     debug=self.debug)
                     # set source of newborn
                     newborn['source'] = ['{}-GA-{}-{}x{}'.format(self.seed,
@@ -369,8 +373,8 @@ class ArtificialSelector(object):
             logging.info('Successfully loaded run {}.'.format(self.run_hash))
         except:
             print_exc()
-            exit('Something went wrong when reloading run {}'.format(self.run_hash))
             logging.error('Something went wrong when reloading run {}'.format(self.run_hash))
+            exit('Something went wrong when reloading run {}'.format(self.run_hash))
         assert len(self.generations) > 1
         return
 
