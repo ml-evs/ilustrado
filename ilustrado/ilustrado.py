@@ -250,10 +250,16 @@ class ArtificialSelector(object):
                             try:
                                 result = queues[ind].get(timeout=60)
                             except:
+                                result = False
                                 logging.warning('Node {} failed to write to queue for newborn {}'
                                                 .format(proc[1],
                                                         ', '.join(newborns[proc[0]]['source'])))
-                                result = False
+                                logging.warning('Assuming {} has been killed, removing from node list for duration.'.format(proc[0]))
+                                self.nodes.remove(proc[1])
+                                self.nprocs -= 1
+                                if len(self.nodes) == 0:
+                                    logging.warning('Number of nodes reached 0, exiting...')
+                                    exit('No nodes remain, exiting...')
                             if isinstance(result, dict):
                                 if self.debug:
                                     print(proc)
@@ -301,7 +307,9 @@ class ArtificialSelector(object):
                                 procs[ind][2].terminate()
                                 logging.warning('Process {} on node {} terminated forcefully.'
                                                 .format(proc[0], proc[1]))
-                            free_nodes.append(proc[1])
+                            # if the node didn't return a result, then don't use again
+                            if result is not False:
+                                free_nodes.append(proc[1])
                             del procs[ind]
                             del queues[ind]
                             attempts += 1
