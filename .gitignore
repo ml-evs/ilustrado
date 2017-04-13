@@ -3,10 +3,3 @@
 build/
 dist/
 *.egg*
-KP-*
-completed/
-input/
-bad_castep/
-*.pdf
-*.log
-*.json
