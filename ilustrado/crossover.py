@@ -10,16 +10,17 @@ def crossover(parents, method='random_slice', debug=False):
     elif method is 'periodic_cut':
         _crossover = periodic_cut
 
-    return _crossover(parents)
+    return _crossover(parents, debug=debug)
 
 
-def random_slice(parents):
+def random_slice(parents, debug=False):
     """ Random reflection, rotation and slicing
     a la XtalOpt.
 
     TO-DO:
 
-    * random rotation
+        * random rotation
+
     """
     child = dict()
     # cut_val is a number between 0.25 and 0.75, the slice position in fractional coordinates
