@@ -29,11 +29,11 @@ def random_slice(parents, debug=False):
     child['positions_frac'] = []
     child['atom_types'] = []
     child['lattice_cart'] = (cut_val * np.asarray(parents[0]['lattice_cart'])
-                             * (1 - cut_val) * np.asarray(parents[0]['lattice_cart'])).tolist()
+                             + (1-cut_val) * np.asarray(parents[1]['lattice_cart']))
     axis = np.random.randint(low=0, high=3)
     for ind, parent in enumerate(parents):
         for atom, pos in zip(parent['atom_types'], parent['positions_frac']):
-            if ind == (pos[axis] >= cut_val):
+            if ind == (pos[axis] <= cut_val):
                 child['positions_frac'].append(pos)
                 child['atom_types'].append(atom)
     # check child is sensible
