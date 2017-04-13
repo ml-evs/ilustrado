@@ -294,13 +294,13 @@ class ArtificialSelector(object):
                             try:
                                 procs[ind][2].join(timeout=10)
                                 logging.debug('Process {} on node {} died gracefully.'
-                                              .format(ind, proc[1]))
+                                              .format(proc[0], proc[1]))
                             except:
                                 logging.warning('Process {} on node {} has not died gracefully.'
-                                                .format(ind, proc[1]))
+                                                .format(proc[0], proc[1]))
                                 procs[ind][2].terminate()
                                 logging.warning('Process {} on node {} terminated forcefully.'
-                                                .format(ind, proc[1]))
+                                                .format(proc[0], proc[1]))
                             free_nodes.append(proc[1])
                             del procs[ind]
                             del queues[ind]
