@@ -52,6 +52,7 @@ class ArtificialSelector(object):
                  nodes=None,
                  recover_from=None,
                  debug=False,
+                 verbosity=0,
                  loglevel='info'):
         """ Initialise parameters, gene pool and begin GA. """
 
@@ -91,6 +92,7 @@ class ArtificialSelector(object):
         self.run_hash = generate_hash()
         self.recover_from = recover_from  # recover from previous run with this hash
         self.debug = debug
+        self.verbosity = verbosity
         self.testing = False
         self.ncores = ncores
         self.nprocs = nprocs
@@ -228,7 +230,8 @@ class ArtificialSelector(object):
                                          ', '.join(newborns[-1]['mutations'])))
                     relaxer = FullRelaxer(self.ncores, None, node,
                                           newborns[-1], self.param_dict, self.cell_dict,
-                                          debug=False, verbosity=0,
+                                          debug=False, verbosity=self.verbosity,
+                                          reopt=False,
                                           start=False, redirect=False)
                     queues.append(mp.Queue())
                     procs.append((newborn_id, node,
@@ -311,7 +314,7 @@ class ArtificialSelector(object):
                                 logging.warning('Process {} on node {} terminated forcefully.'
                                                 .format(proc[0], proc[1]))
                             # if the node didn't return a result, then don't use again
-                            if self.monitor and result is not False:
+                            if not self.monitor or result is not False:
                                 free_nodes.append(proc[1])
                             del procs[ind]
                             del queues[ind]
