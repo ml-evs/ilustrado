@@ -96,7 +96,8 @@ def check_feasible(mutant, parents):
         * number density within 25% of pre-mutation/birth level,
         * no overlapping atoms,
         * cell angles between 50 and 130 degrees,
-        * fewer than max_num_atoms in the cell.
+        * fewer than max_num_atoms in the cell,
+        * ensure number of atomic types is maintained.
 
     Input:
 
@@ -147,4 +148,7 @@ def check_feasible(mutant, parents):
         elif mutant['lattice_abc'][1][i] > 130:
             logging.debug('Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations'])))
             return False
+    # check that we haven't deleted/transmuted all atoms of a certain type
+    if len(set(mutant['atom_types'])) < len(set(parents[0]['atom_types'])):
+        return False
     return True
