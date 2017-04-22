@@ -74,7 +74,7 @@ class ArtificialSelector(object):
         self.population = population  # target size of each generation
         self.num_survivors = num_survivors
         self.num_generations = num_generations
-        self.elitism = elitism  # fraction of previous generation to carry throough
+        self.elitism = elitism  # fraction of previous generation to carry through
         self.num_elite = int(self.elitism * self.num_survivors)
         assert self.num_survivors < self.population + self.num_elite, 'Survivors > population!'
         self.generations = []  # list to store all generations
@@ -364,6 +364,8 @@ class ArtificialSelector(object):
 
         next_gen.rank()
         logging.info('Ranked structures in generation {}'.format(len(self.generations)-1))
+        cleaned = next_gen.clean()
+        logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1), cleaned)
 
         self.generations.append(next_gen)
         logging.info('Added current generation {} to generation list.'
