@@ -16,15 +16,16 @@ from matador.utils.chem_utils import get_formula_from_stoich
 # external libraries
 import numpy as np
 # standard library
-from os import listdir
+import multiprocessing as mp
+import logging
+from os import listdir, devnull
 from os.path import isfile
 from time import sleep
-import multiprocessing as mp
+from subprocess import Popen
 from traceback import print_exc
 from json import dumps, dump
 from sys import exit
 from copy import deepcopy
-import logging
 
 
 class ArtificialSelector(object):
@@ -51,6 +52,7 @@ class ArtificialSelector(object):
                  max_num_atoms=40,
                  nodes=None,
                  recover_from=None,
+                 executable='castep',
                  debug=False,
                  verbosity=0,
                  loglevel='info'):
@@ -91,6 +93,7 @@ class ArtificialSelector(object):
         # set up logistics
         self.run_hash = generate_hash()
         self.recover_from = recover_from  # recover from previous run with this hash
+        self.executable = executable
         self.debug = debug
         self.verbosity = verbosity
         self.testing = False
@@ -231,7 +234,7 @@ class ArtificialSelector(object):
                     relaxer = FullRelaxer(self.ncores, None, node,
                                           newborns[-1], self.param_dict, self.cell_dict,
                                           debug=False, verbosity=self.verbosity,
-                                          reopt=False,
+                                          reopt=False, executable=self.executable,
                                           start=False, redirect=False)
                     queues.append(mp.Queue())
                     procs.append((newborn_id, node,
@@ -311,6 +314,7 @@ class ArtificialSelector(object):
                                 logging.warning('Process {} on node {} has not died gracefully.'
                                                 .format(proc[0], proc[1]))
                                 procs[ind][2].terminate()
+
                                 logging.warning('Process {} on node {} terminated forcefully.'
                                                 .format(proc[0], proc[1]))
                             # if the node didn't return a result, then don't use again
@@ -330,6 +334,8 @@ class ArtificialSelector(object):
             if len(procs) > 1:
                 for proc in procs:
                     proc[2].terminate()
+                    _, = Popen(['ssh', proc[1], 'pkill', self.executable],
+                               stdout=devnull, shell=False)
             raise SystemExit
 
         # clean up at end either way
