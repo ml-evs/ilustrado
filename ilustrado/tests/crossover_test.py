@@ -17,8 +17,8 @@ class CrossOverTest(unittest.TestCase):
         parent = generation[3]
         child = crossover([parent, parent], debug=True)
         np.testing.assert_allclose(child['lattice_cart'], parent['lattice_cart'], rtol=1e-5)
-        np.testing.assert_allclose(child['positions_frac'], parent['positions_frac'], rtol=1e-5)
-        self.assertEqual(child['atom_types'], parent['atom_types'])
+        np.testing.assert_allclose(sorted(child['positions_frac']), sorted(parent['positions_frac']), rtol=1e-5)
+        self.assertEqual(sorted(child['atom_types']), sorted(parent['atom_types']))
 
 
 if __name__ == '__main__':
