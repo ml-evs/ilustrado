@@ -8,6 +8,20 @@ TO-DO:
 import numpy as np
 
 
+class FakeFullRelaxer(object):
+    """ Fake Relaxer for testing. """
+    def __init__(self, ncores, nnodes, node, structure, params, cell, **kwargs):
+        self.structure = structure
+
+    def relax(self, output_queue=None):
+        if np.random.rand() < 0.8:
+            self.structure['optimised'] = True
+        else:
+            self.structure['optimised'] = False
+        self.structure['source'] = ['fake.res']
+        output_queue.put(self.structure)
+
+
 def strip_useless(doc):
     """ Strip useless information from a matador doc. """
     stripped_doc = dict()

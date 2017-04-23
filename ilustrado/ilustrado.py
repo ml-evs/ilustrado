@@ -54,6 +54,7 @@ class ArtificialSelector(object):
                  recover_from=None,
                  executable='castep',
                  debug=False,
+                 testing=False,
                  verbosity=0,
                  loglevel='info'):
         """ Initialise parameters, gene pool and begin GA. """
@@ -98,7 +99,7 @@ class ArtificialSelector(object):
         self.executable = executable
         self.debug = debug
         self.verbosity = verbosity
-        self.testing = False
+        self.testing = testing
         self.ncores = ncores
         self.nprocs = nprocs
         self.nodes = nodes
@@ -234,11 +235,19 @@ class ArtificialSelector(object):
                     logging.info('Initialised newborn {} with mutations ({})'
                                  .format(', '.join(newborns[-1]['source']),
                                          ', '.join(newborns[-1]['mutations'])))
-                    relaxer = FullRelaxer(self.ncores, None, node,
-                                          newborns[-1], self.param_dict, self.cell_dict,
-                                          debug=False, verbosity=self.verbosity,
-                                          reopt=False, executable=self.executable,
-                                          start=False, redirect=False)
+                    if self.testing:
+                        from ilustrado.util import FakeFullRelaxer
+                        relaxer = FakeFullRelaxer(self.ncores, None, node,
+                                                  newborns[-1], self.param_dict, self.cell_dict,
+                                                  debug=False, verbosity=self.verbosity,
+                                                  reopt=False, executable=self.executable,
+                                                  start=False, redirect=False)
+                    else:
+                        relaxer = FullRelaxer(self.ncores, None, node,
+                                              newborns[-1], self.param_dict, self.cell_dict,
+                                              debug=False, verbosity=self.verbosity,
+                                              reopt=False, executable=self.executable,
+                                              start=False, redirect=False)
                     queues.append(mp.Queue())
                     procs.append((newborn_id, node,
                                   mp.Process(target=relaxer.relax,
@@ -358,7 +367,7 @@ class ArtificialSelector(object):
         next_gen.rank()
         logging.info('Ranked structures in generation {}'.format(len(self.generations)-1))
         cleaned = next_gen.clean()
-        logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1), cleaned)
+        logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1, cleaned))
 
         # add random elite structures from previous gen
         elites = []
