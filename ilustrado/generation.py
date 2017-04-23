@@ -72,7 +72,7 @@ class Generation():
     def clean(self):
         """ Remove structures with pathological formation enthalpies. """
         init_len = len(self.populace)
-        self.populace = [populum for populum in self.populace if self.populace['formation_enthalpy_per_atom'] > -3.5]
+        self.populace = [populum for populum in self.populace if populum['formation_enthalpy_per_atom'] > -3.5]
         return init_len-len(self.populace)
 
     def set_bourgeoisie(self, elites=None):
