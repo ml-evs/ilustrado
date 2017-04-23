@@ -76,7 +76,9 @@ class ArtificialSelector(object):
         self.num_generations = num_generations
         self.elitism = elitism  # fraction of previous generation to carry through
         self.num_elite = int(self.elitism * self.num_survivors)
+        self.num_accepted = self.num_survivors - self.num_elite
         assert self.num_survivors < self.population + self.num_elite, 'Survivors > population!'
+        assert self.num_accepted < self.population, 'Accepted > population!'
         self.generations = []  # list to store all generations
         self.hull = hull  # QueryConvexHull object to calculate hull fitness
         self.fitness_metric = fitness_metric  # choose method of ranking structures
@@ -189,6 +191,7 @@ class ArtificialSelector(object):
         next_gen = Generation(self.run_hash,
                               len(self.generations),
                               self.num_survivors,
+                              self.num_accepted,
                               fitness_calculator=self.fitness_calculator)
         # newborns is a list of structures, initially raw then relaxed
         newborns = []
@@ -352,20 +355,23 @@ class ArtificialSelector(object):
             logging.warning('Next gen is smaller than desired population.')
         assert len(next_gen) >= self.population
 
-        # add random elite structures from previous gen
-        for i in range(self.num_elite):
-            doc = deepcopy(np.random.choice(self.generations[-1].bourgeoisie))
-            next_gen.birth(doc)
-            if self.debug:
-                print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
-                                                           doc['hull_distance']))
-        logging.info('Added elite structures from previous generation to next gen.')
-        logging.info('New length of next gen: {}.'.format(len(next_gen)))
-
         next_gen.rank()
         logging.info('Ranked structures in generation {}'.format(len(self.generations)-1))
         cleaned = next_gen.clean()
         logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1), cleaned)
+
+        # add random elite structures from previous gen
+        elites = []
+        for i in range(self.num_elite):
+            doc = deepcopy(np.random.choice(self.generations[-1].bourgeoisie))
+            elites.append(doc)
+            if self.debug:
+                print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
+                                                           doc['hull_distance']))
+        next_gen.set_bourgeoisie(elites=elites)
+
+        logging.info('Added elite structures from previous generation to next gen.')
+        logging.info('New length of next gen: {}.'.format(len(next_gen)))
 
         self.generations.append(next_gen)
         logging.info('Added current generation {} to generation list.'
@@ -387,6 +393,7 @@ class ArtificialSelector(object):
                 self.generations.append(Generation(self.run_hash,
                                                    i,
                                                    self.num_survivors,
+                                                   self.num_accepted,
                                                    dumpfile=fname,
                                                    fitness_calculator=None))
                 logging.info('Successfully loaded generation {} from run {}.'.format(i, self.run_hash))
@@ -431,8 +438,11 @@ class ArtificialSelector(object):
         self.generations.append(Generation(self.run_hash,
                                            0,
                                            self.num_survivors,
+                                           self.num_accepted,
                                            fitness_calculator=None,
                                            populace=self.gene_pool))
+
+        self.generations[-1].set_bourgeoisie()
 
         logging.info('Successfully initialised generation 0 with {} members'
                      .format(len(self.generations[-1])))

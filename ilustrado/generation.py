@@ -14,13 +14,14 @@ from traceback import print_exc
 class Generation():
     """ Stores each generation of structures. """
 
-    def __init__(self, run_hash, generation_idx, num_survivors,
+    def __init__(self, run_hash, generation_idx, num_survivors, num_accepted,
                  populace=None, dumpfile=None, fitness_calculator=None):
 
         self.populace = []
         if populace is not None:
             self.populace = populace
         self._num_survivors = num_survivors
+        self._num_accepted = num_accepted
         self._fitness_calculator = fitness_calculator
         self.run_hash = run_hash
         self.generation_idx = generation_idx
@@ -74,11 +75,12 @@ class Generation():
         self.populace = [populum for populum in self.populace if self.populace['formation_enthalpy_per_atom'] > -3.5]
         return init_len-len(self.populace)
 
-    @property
-    def bourgeoisie(self):
-        return sorted(self.populace,
-                      key=lambda member: member['fitness'],
-                      reverse=True)[:self._num_survivors]
+    def set_bourgeoisie(self, elites=None):
+        self.bourgeoisie = sorted(self.populace,
+                                  key=lambda member: member['fitness'],
+                                  reverse=True)[:self._num_accepted]
+        if elites is not None:
+            self.bourgeoisie.extend(elites)
 
     @property
     def fitnesses(self):
