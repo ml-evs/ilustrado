@@ -31,7 +31,7 @@ class FitnessCalculator(object):
 
     def evaluate(self, generation):
         raw = self._get_raw(generation)
-        fitnesses = 1 - np.tanh(raw)
+        fitnesses = 1 - np.tanh(2*raw)
         fitnesses[fitnesses > 1.0] = 1.0
 
         for ind, populum in enumerate(generation):
