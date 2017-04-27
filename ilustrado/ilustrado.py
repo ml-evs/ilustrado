@@ -310,7 +310,7 @@ class ArtificialSelector(object):
                                     status = 'Failed'
                                     result = strip_useless(result)
                                     with open(self.run_hash+'-failed.json', 'a') as f:
-                                        dump(result, f)
+                                        dump(result, f, sort_keys=False, indent=2)
                                 print('{:^25} {:^10} {:^10} {:^10} {:^30}'
                                       .format(newborns[proc[0]]['source'][0],
                                               get_formula_from_stoich(
