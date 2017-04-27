@@ -45,7 +45,8 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         # turn specified mutations string into corresponding functions
         if mutations is not None:
             _mutations = []
-            from .mutate import nudge_positions, null_nudge_positions, permute_atoms, random_strain, vacancy
+            from .mutate import nudge_positions, null_nudge_positions, permute_atoms
+            from .mutate import random_strain, vacancy, voronoi_shuffle
             for mutation in mutations:
                 if mutation is 'nudge_positions':
                     _mutations.append(nudge_positions)
@@ -55,6 +56,8 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                     _mutations.append(permute_atoms)
                 elif mutation is 'random_strain':
                     _mutations.append(random_strain)
+                elif mutation is 'voronoi':
+                    _mutations.append(voronoi_shuffle)
                 elif mutation is 'vacancy':
                     _mutations.append(vacancy)
         else:
@@ -135,7 +138,7 @@ def check_feasible(mutant, parents):
         distances = np.append(distances, cdist(poscart+trans, poscart))
     distances = np.ma.masked_where(distances < 1e-12, distances)
     distances = distances.compressed()
-    if np.min(distances) <= 1:
+    if np.min(distances) <= 1.4:
         logging.debug('Mutant with {} failed minsep check.'.format(', '.join(mutant['mutations'])))
         return False
     # check all cell angles are between 60 and 120.

@@ -9,6 +9,8 @@ import numpy as np
 from copy import deepcopy
 from matador.utils.cell_utils import cart2abc
 from matador.utils.chem_utils import get_stoich
+from matador.voronoi_interface import get_voronoi_substructure
+from sklearn.cluster import KMeans
 from traceback import print_exc
 from sys import exit
 from bson.json_util import dumps
@@ -16,7 +18,6 @@ from bson.json_util import dumps
 
 def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     """ Wrap _mutate to check for null/invalid mutations. """
-
     mutant = deepcopy(parent)
     attempts = 0
     try:
@@ -44,7 +45,6 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
 
 def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
     """ Choose a random mutation and apply it. """
-    debug = debug
     if mutations is None:
         possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
     else:
@@ -53,7 +53,6 @@ def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
         num_mutations = 1
     else:
         num_mutations = np.random.randint(1, max_num_mutations)
-    # num_mutations = 1
     if debug:
         print('num_mutations', num_mutations)
     # get random list of num_mutations mutators to apply
@@ -68,12 +67,7 @@ def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
 
 
 def permute_atoms(mutant, debug=False):
-    """ Swap the positions of random pairs of atoms.
-
-    TO-DO: - should this favour similar atomic masses?
-           - how many swaps should be done relative to num_atoms?
-    """
-
+    """ Swap the positions of random pairs of atoms. """
     num_atoms = mutant['num_atoms']
     initial_atoms = deepcopy(mutant['atom_types'])
 
@@ -100,7 +94,6 @@ def permute_atoms(mutant, debug=False):
 
 def vacancy(mutant, debug=False):
     """ Remove a random atom from the structure. """
-
     vacancy_idx = np.random.randint(0, mutant['num_atoms']-1)
     if debug:
         print('Removing atom {} of type {} from cell.'.format(vacancy_idx,
@@ -116,12 +109,33 @@ def vacancy(mutant, debug=False):
     mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
 
 
+def voronoi_shuffle(mutant, remove_element=None, debug=False):
+    """ Remove all atoms of type element, then perform Voronoi analysis
+    on the remaining sublattice. Cluster the nodes with KMeans, then
+    repopulate the clustered Voronoi nodes with atoms of the removed element.
+    """
+    if remove_element is None:
+        remove_element = np.random.choice(set(mutant['atom_types']))
+    mutant['atom_types'], mutant['positions_frac'] = \
+        zip(*[(atom, pos) for (atom, pos) in zip(mutant['atom_types'], mutant['positions_frac']) if atom != remove_element])
+    num_removed = mutant['num_atoms'] - len(mutant['atom_types'])
+    mutant['num_atoms'] = len(mutant['atom_types'])
+    mutant['atom_types'], mutant['positions_frac'] = list(mutant['atom_types']), list(mutant['atom_types'])
+    _, = get_voronoi_substructure(mutant)
+    k_means = KMeans(n_clusters=num_removed, precompuate_distances=True)
+    k_means.fit(mutant['voronoi_nodes'])
+    mutant['voronoi_nodes'] = k_means.cluster_centers_.tolist()
+    for node in mutant['voronoi_nodes']:
+        mutant['atom_types'].append(remove_element)
+        mutant['positions_frac'].append(node)
+    mutant['num_atoms'] = len(mutant['atom_types'])
+
+
 def random_strain(mutant, debug=False):
     """ Apply random strain tensor to unit cell from 6
     \epsilon_i components with values between -1 and 1.
     The cell is then scaled to the parent mutant's volume.
     """
-
     def generate_cell_transform_matrix():
         strain_components = 2*np.random.rand(6)-1
         cell_transform_matrix = np.eye(3)
