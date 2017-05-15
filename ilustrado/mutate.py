@@ -1,9 +1,6 @@
 # coding: utf-8
 """ This file implements all possible single mutant
 mutations.
-
-TO-DO: fix metadata of mutated structures, e.g. sources.
-
 """
 import numpy as np
 from copy import deepcopy
@@ -12,7 +9,6 @@ from matador.utils.chem_utils import get_stoich
 from matador.voronoi_interface import get_voronoi_points
 from sklearn.cluster import KMeans
 from traceback import print_exc
-from sys import exit
 from bson.json_util import dumps
 
 
@@ -33,7 +29,7 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
         print(dumps(parent, indent=2))
         print('mutant:')
         print(dumps(mutant, indent=2))
-        exit()
+        attempts += 1
     if debug:
         try:
             print(mutant['mutations'])
@@ -121,8 +117,10 @@ def voronoi_shuffle(mutant, element_to_remove=None, debug=False):
     num_removed = mutant['num_atoms'] - len(mutant['atom_types'])
     mutant['num_atoms'] = len(mutant['atom_types'])
     mutant['atom_types'], mutant['positions_frac'] = list(mutant['atom_types']), list(mutant['positions_frac'])
-    _, = get_voronoi_points(mutant)
-    k_means = KMeans(n_clusters=num_removed, precompuate_distances=True)
+    mutant['voronoi_nodes'] = get_voronoi_points(mutant)
+    if mutant['voronoi_nodes'] is False:
+        raise RuntimeError('Voronoi code failed')
+    k_means = KMeans(n_clusters=num_removed, precompute_distances=True)
     k_means.fit(mutant['voronoi_nodes'])
     mutant['voronoi_nodes'] = k_means.cluster_centers_.tolist()
     for node in mutant['voronoi_nodes']:
