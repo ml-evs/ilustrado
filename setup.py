@@ -21,6 +21,7 @@ setup(name='ilustrado',
           'numpy>=1.10',
           'scipy>=0.18',
           # 'matador', requires a local install of matador
+          'scikit-learn>=0.18',
           'matplotlib==1.5',
           'seaborn'
       ],
