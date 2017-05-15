@@ -9,7 +9,7 @@ import numpy as np
 from copy import deepcopy
 from matador.utils.cell_utils import cart2abc
 from matador.utils.chem_utils import get_stoich
-from matador.voronoi_interface import get_voronoi_substructure
+from matador.voronoi_interface import get_voronoi_points
 from sklearn.cluster import KMeans
 from traceback import print_exc
 from sys import exit
@@ -109,24 +109,24 @@ def vacancy(mutant, debug=False):
     mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
 
 
-def voronoi_shuffle(mutant, remove_element=None, debug=False):
+def voronoi_shuffle(mutant, element_to_remove=None, debug=False):
     """ Remove all atoms of type element, then perform Voronoi analysis
     on the remaining sublattice. Cluster the nodes with KMeans, then
     repopulate the clustered Voronoi nodes with atoms of the removed element.
     """
-    if remove_element is None:
-        remove_element = np.random.choice(set(mutant['atom_types']))
+    if element_to_remove is None:
+        element_to_remove = np.random.choice(list(set(mutant['atom_types'])))
     mutant['atom_types'], mutant['positions_frac'] = \
-        zip(*[(atom, pos) for (atom, pos) in zip(mutant['atom_types'], mutant['positions_frac']) if atom != remove_element])
+        zip(*[(atom, pos) for (atom, pos) in zip(mutant['atom_types'], mutant['positions_frac']) if atom != element_to_remove])
     num_removed = mutant['num_atoms'] - len(mutant['atom_types'])
     mutant['num_atoms'] = len(mutant['atom_types'])
-    mutant['atom_types'], mutant['positions_frac'] = list(mutant['atom_types']), list(mutant['atom_types'])
-    _, = get_voronoi_substructure(mutant)
+    mutant['atom_types'], mutant['positions_frac'] = list(mutant['atom_types']), list(mutant['positions_frac'])
+    _, = get_voronoi_points(mutant)
     k_means = KMeans(n_clusters=num_removed, precompuate_distances=True)
     k_means.fit(mutant['voronoi_nodes'])
     mutant['voronoi_nodes'] = k_means.cluster_centers_.tolist()
     for node in mutant['voronoi_nodes']:
-        mutant['atom_types'].append(remove_element)
+        mutant['atom_types'].append(element_to_remove)
         mutant['positions_frac'].append(node)
     mutant['num_atoms'] = len(mutant['atom_types'])
 
