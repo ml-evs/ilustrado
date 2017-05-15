@@ -23,13 +23,16 @@ def random_slice(parents, debug=False):
 
     """
     child = dict()
-    # cut_val is a number between 0.25 and 0.75, the slice position in fractional coordinates
-    cut_val = 0.25 + (np.random.rand() / 2.0)
+    # child_size is a number between 0.5 and 2
+    child_size = 0.5 + 1.5*np.random.rand()
+    # cut_val is a number between 0.25*child_size and 0.75*child_size
+    # the slice position of one parent in fractional coordinates (the other is (child_size-cut_val))
+    cut_val = child_size*(0.25 + (np.random.rand() / 2.0))
 
     child['positions_frac'] = []
     child['atom_types'] = []
     child['lattice_cart'] = (cut_val * np.asarray(parents[0]['lattice_cart'])
-                             + (1-cut_val) * np.asarray(parents[1]['lattice_cart']))
+                             + (child_size-cut_val) * np.asarray(parents[1]['lattice_cart']))
     axis = np.random.randint(low=0, high=3)
     for ind, parent in enumerate(parents):
         for atom, pos in zip(parent['atom_types'], parent['positions_frac']):
