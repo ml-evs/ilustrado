@@ -42,7 +42,7 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
 def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
     """ Choose a random mutation and apply it. """
     if mutations is None:
-        possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy]
+        possible_mutations = [permute_atoms, random_strain, nudge_positions, vacancy, voronoi_shuffle]
     else:
         possible_mutations = mutations
     if max_num_mutations == 1:
