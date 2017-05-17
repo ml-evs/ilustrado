@@ -175,7 +175,6 @@ class ArtificialSelector(object):
         while len(self.generations) < self.num_generations:
             self.breed_generation()
             logging.info('Successfully bred generation {}'.format(len(self.generations)))
-            fitness_swarm_plot(self.generations)
 
         assert len(self.generations) == self.num_generations
         print('Reached target number of generations!')
@@ -224,7 +223,6 @@ class ArtificialSelector(object):
                                     max_num_mutations=self.max_num_mutations,
                                     max_num_atoms=self.max_num_atoms,
                                     debug=self.debug)
-                    # set source of newborn
                     newborn['source'] = ['{}-GA-{}-{}x{}'.format(self.seed,
                                                                  self.run_hash,
                                                                  len(self.generations),
@@ -394,6 +392,8 @@ class ArtificialSelector(object):
         """ Attempt to recover previous generations from files in cwd
         named '<run_hash>_gen{}.json'.format(gen_idx).
         """
+        if not isfile(('{}-gen0.json').format(self.run_hash)):
+            exit('Failed to load run, files missing for {}'.format(self.run_hash))
         try:
             i = 0
             while isfile('{}-gen{}.json'.format(self.run_hash, i)):
@@ -414,6 +414,8 @@ class ArtificialSelector(object):
             logging.error('Something went wrong when reloading run {}'.format(self.run_hash))
             exit('Something went wrong when reloading run {}'.format(self.run_hash))
         assert len(self.generations) > 1
+        for i in range(len(self.generations)):
+            self.generations[i].set_bourgeoisie()
         return
 
     def seed_generation_0(self, gene_pool):
