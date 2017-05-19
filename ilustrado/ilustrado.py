@@ -17,11 +17,11 @@ from matador.utils.chem_utils import get_formula_from_stoich
 import numpy as np
 # standard library
 import multiprocessing as mp
+import subprocess as sp
 import logging
-from os import listdir, devnull
+from os import listdir
 from os.path import isfile
 from time import sleep
-from subprocess import Popen
 from traceback import print_exc
 from json import dumps, dump
 from sys import exit
@@ -52,6 +52,7 @@ class ArtificialSelector(object):
                  max_num_atoms=40,
                  nodes=None,
                  recover_from=None,
+                 load_only=False,
                  executable='castep',
                  debug=False,
                  testing=False,
@@ -103,6 +104,8 @@ class ArtificialSelector(object):
         self.ncores = ncores
         self.nprocs = nprocs
         self.nodes = nodes
+        if isinstance(self.ncores, list):
+            assert len(self.ncores) == len(self.nodes)
         self.monitor = monitor  # bool: if a node dies, leave it dead
 
         if self.recover_from is not None:
@@ -130,59 +133,60 @@ class ArtificialSelector(object):
                 logging.info('Attempting to recover from previous run {}'.format(self.run_hash))
             self.recover()
 
-        print('Initialising quantum mechanics...', end=' ')
-        # read parameters for relaxation from seed files
-        if seed is not None:
-            self.seed = seed
-            self.cell_dict, success_cell = cell2dict(seed, db=False)
-            if not success_cell:
-                print(self.cell_dict)
-                exit('Failed to read cell file.')
-            self.param_dict, success_param = param2dict(seed, db=False)
-            if not success_param:
-                print(self.param_dict)
-                exit('Failed to read param file.')
-        elif not self.testing:
-            exit('Not in testing mode, and failed to provide seed... exiting.')
-        else:
-            self.seed = 'ga_test'
-        print('Done!\n')
-        logging.debug('Successfully initialised cell and param files.')
+        if not load_only:
+            print('Initialising quantum mechanics...', end=' ')
+            # read parameters for relaxation from seed files
+            if seed is not None:
+                self.seed = seed
+                self.cell_dict, success_cell = cell2dict(seed, db=False)
+                if not success_cell:
+                    print(self.cell_dict)
+                    exit('Failed to read cell file.')
+                self.param_dict, success_param = param2dict(seed, db=False)
+                if not success_param:
+                    print(self.param_dict)
+                    exit('Failed to read param file.')
+            elif not self.testing:
+                exit('Not in testing mode, and failed to provide seed... exiting.')
+            else:
+                self.seed = 'ga_test'
+            print('Done!\n')
+            logging.debug('Successfully initialised cell and param files.')
 
-        # initialise fitness calculator
-        if self.fitness_metric == 'hull' and self.hull is None:
-            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
-        if self.fitness_metric in ['dummy', 'hull_test']:
-            self.testing = True
-        print('Done!')
-        self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
-                                                    hull=self.hull, debug=self.debug)
-        logging.debug('Successfully initialised fitness calculator.')
+            # initialise fitness calculator
+            if self.fitness_metric == 'hull' and self.hull is None:
+                exit('Need to pass a QueryConvexHull object to use hull distance metric.')
+            if self.fitness_metric in ['dummy', 'hull_test']:
+                self.testing = True
+            print('Done!')
+            self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
+                                                        hull=self.hull, debug=self.debug)
+            logging.debug('Successfully initialised fitness calculator.')
 
-        if self.recover_from is None:
-            self.seed_generation_0(gene_pool)
+            if self.recover_from is None:
+                self.seed_generation_0(gene_pool)
 
-        if self.debug:
-            print(self.nodes)
-        if self.nodes is not None:
-            logging.debug('Running on nodes: {}'.format(' '.join(self.nodes)))
-        else:
-            logging.debug('Running on local machine')
+            if self.debug:
+                print(self.nodes)
+            if self.nodes is not None:
+                logging.debug('Running on nodes: {}'.format(' '.join(self.nodes)))
+            else:
+                logging.debug('Running on local machine')
 
-        if self.debug:
-            print('Current number of generations: {}. Target number: {}'.format(len(self.generations), self.num_generations))
-        # run GA self.num_generations
-        while len(self.generations) < self.num_generations:
-            self.breed_generation()
-            logging.info('Successfully bred generation {}'.format(len(self.generations)))
+            if self.debug:
+                print('Current number of generations: {}. Target number: {}'.format(len(self.generations), self.num_generations))
+            # run GA self.num_generations
+            while len(self.generations) < self.num_generations:
+                self.breed_generation()
+                logging.info('Successfully bred generation {}'.format(len(self.generations)))
 
-        assert len(self.generations) == self.num_generations
-        print('Reached target number of generations!')
-        print('Completed GA!')
-        logging.info('Reached target number of generations!')
-        logging.info('Completed GA!')
-        # plot simple fitness graph
-        fitness_swarm_plot(self.generations)
+            assert len(self.generations) == self.num_generations
+            print('Reached target number of generations!')
+            print('Completed GA!')
+            logging.info('Reached target number of generations!')
+            logging.info('Completed GA!')
+            # plot simple aitness graph
+            fitness_swarm_plot(self.generations)
 
     def breed_generation(self):
         """ Build next generation from mutations of current,
@@ -201,8 +205,16 @@ class ArtificialSelector(object):
         queues = []
         if self.nodes is None:
             free_nodes = self.nprocs * [None]
+            if isinstance(self.ncores, list):
+                free_cores = self.nprocs * [None]
+            else:
+                free_cores = self.nprocs * [self.ncores]
         else:
             free_nodes = deepcopy(self.nodes)
+            if isinstance(self.ncores, list):
+                free_cores = deepcopy(self.ncores)
+            else:
+                free_cores = len(self.nodes) * [self.ncores]
         self.max_attempts = 5 * self.population
         attempts = 0
         print('Computing generation {}:'.format(len(self.generations)))
@@ -230,29 +242,32 @@ class ArtificialSelector(object):
                     newborns.append(newborn)
                     newborn_id = len(newborns)-1
                     node = free_nodes.pop()
+                    ncores = free_cores.pop()
                     logging.info('Initialised newborn {} with mutations ({})'
                                  .format(', '.join(newborns[-1]['source']),
                                          ', '.join(newborns[-1]['mutations'])))
                     if self.testing:
                         from ilustrado.util import FakeFullRelaxer
-                        relaxer = FakeFullRelaxer(self.ncores, None, node,
+                        relaxer = FakeFullRelaxer(ncores, None, node,
                                                   newborns[-1], self.param_dict, self.cell_dict,
                                                   debug=False, verbosity=self.verbosity,
                                                   reopt=False, executable=self.executable,
                                                   start=False, redirect=False)
                     else:
-                        relaxer = FullRelaxer(self.ncores, None, node,
+                        relaxer = FullRelaxer(ncores, None, node,
                                               newborns[-1], self.param_dict, self.cell_dict,
                                               debug=False, verbosity=self.verbosity,
                                               reopt=False, executable=self.executable,
                                               start=False, redirect=False)
                     queues.append(mp.Queue())
+                    # store proc object with structure ID, node name, output queue and number of cores
                     procs.append((newborn_id, node,
                                   mp.Process(target=relaxer.relax,
-                                             args=(queues[-1],))))
+                                             args=(queues[-1],)),
+                                  ncores))
                     procs[-1][2].start()
                     logging.info('Initialised relaxation for newborn {} on node {} with {} cores.'
-                                 .format(', '.join(newborns[-1]['source']), node, self.ncores))
+                                 .format(', '.join(newborns[-1]['source']), node, ncores))
                 # are we using all nodes? if so, are they all still running?
                 elif len(procs) == self.nprocs and all([proc[2].is_alive() for proc in procs]):
                     # poll processes every 10 seconds
@@ -273,7 +288,7 @@ class ArtificialSelector(object):
                                                 .format(proc[1],
                                                         ', '.join(newborns[proc[0]]['source'])))
                                 if self.monitor:
-                                    logging.warning('Assuming {} has been killed, removing from node list for duration.'.format(proc[0]))
+                                    logging.warning('Assuming {} has died, removing from node list for duration.'.format(proc[0]))
                                     self.nodes.remove(proc[1])
                                     self.nprocs -= 1
                                 if len(self.nodes) == 0:
@@ -330,6 +345,7 @@ class ArtificialSelector(object):
                             # if the node didn't return a result, then don't use again
                             if not self.monitor or result is not False:
                                 free_nodes.append(proc[1])
+                                free_cores.append(proc[3])
                             del procs[ind]
                             del queues[ind]
                             attempts += 1
@@ -344,14 +360,18 @@ class ArtificialSelector(object):
             if len(procs) > 1:
                 for proc in procs:
                     proc[2].terminate()
-                    _, = Popen(['ssh', proc[1], 'pkill', self.executable],
-                               stdout=devnull, shell=False)
+                    result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                                    stdout=sp.DEVNULL, shell=False)
             raise SystemExit
 
+        logging.info('No longer breeding structures in this generation.')
         # clean up at end either way
         if len(procs) > 1:
+            logging.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
             for proc in procs:
                 proc[2].terminate()
+                result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                                stdout=sp.DEVNULL, shell=False)
 
         if attempts >= self.max_attempts:
             logging.warning('Failed to return enough successful structures to continue...')
