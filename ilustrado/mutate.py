@@ -48,7 +48,7 @@ def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
     if max_num_mutations == 1:
         num_mutations = 1
     else:
-        num_mutations = np.random.randint(1, max_num_mutations)
+        num_mutations = np.random.randint(1, high=max_num_mutations+1)
     if debug:
         print('num_mutations', num_mutations)
     # get random list of num_mutations mutators to apply
