@@ -5,6 +5,7 @@ evaulate their fitness.
 
 # matador modules
 from matador.utils.chem_utils import get_formula_from_stoich
+from matador.similarity.pdf_similarity import PDF
 # external libraries
 # standard library
 import json
@@ -81,6 +82,27 @@ class Generation():
                                   reverse=True)[:self._num_accepted]
         if elites is not None:
             self.bourgeoisie.extend(elites)
+
+    def calc_pdfs(self):
+        self._pdfs = []
+        for structure in self.populace:
+            self._pdfs.append(PDF(structure, projected=True))
+
+    def is_dupe(self, doc):
+        new_pdf = PDF(doc, projected=True)
+        for pdf in self.pdfs:
+            dist = new_pdf.get_sim_distance(pdf, projected=True)
+            if dist < 5e-2:
+                return True
+        return False
+
+    @property
+    def pdfs(self):
+        try:
+            return self._pdfs
+        except(AttributeError, AssertionError):
+            self.calc_pdfs()
+            return self._pdfs
 
     @property
     def fitnesses(self):

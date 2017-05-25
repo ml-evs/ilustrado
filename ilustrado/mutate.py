@@ -3,39 +3,28 @@
 mutations.
 """
 import numpy as np
+import logging
 from copy import deepcopy
 from matador.utils.cell_utils import cart2abc
 from matador.utils.chem_utils import get_stoich
 from matador.voronoi_interface import get_voronoi_points
 from sklearn.cluster import KMeans
-from traceback import print_exc
-from bson.json_util import dumps
 
 
 def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     """ Wrap _mutate to check for null/invalid mutations. """
     mutant = deepcopy(parent)
     attempts = 0
-    try:
-        while parent == mutant:
-            _mutate(mutant,
-                    mutations=mutations,
-                    max_num_mutations=max_num_mutations,
-                    debug=debug)
-            attempts += 1
-    except:
-        print_exc()
-        print('original:')
-        print(dumps(parent, indent=2))
-        print('mutant:')
-        print(dumps(mutant, indent=2))
+    max_attempts = 100
+    while parent == mutant and attempts < max_attempts:
+        _mutate(mutant,
+                mutations=mutations,
+                max_num_mutations=max_num_mutations,
+                debug=debug)
         attempts += 1
-    if debug:
-        try:
-            print(mutant['mutations'])
-        except:
-            print(mutant)
-            print_exc()
+    if attempts == max_attempts:
+        logging.warning('Failed to mutate with {}'.format(mutations))
+
     return mutant
 
 
@@ -181,7 +170,7 @@ def random_strain(mutant, debug=False):
         print('cell_transform_matrix:', cell_transform_matrix.tolist())
 
 
-def nudge_positions(mutant, amplitude=0.1, debug=False):
+def nudge_positions(mutant, amplitude=0.5, debug=False):
     """ Apply Gaussian noise to all atomic positions. """
     new_positions_frac = np.array(mutant['positions_frac'])
     for ind, atom in enumerate(mutant['positions_frac']):

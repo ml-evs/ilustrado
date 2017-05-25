@@ -32,6 +32,35 @@ class ArtificialSelector(object):
     """ ArtificialSelector takes an initial gene pool
     and applies a genetic algorithm to optimise some
     fitness function.
+
+    Args:
+
+        gene_pool         : list(dict), initial cursor to use as "Generation 0",
+        seed              : str, seed name of cell and param files for CASTEP,
+        fitness_metric    : str, currently either 'hull' or 'test',
+        hull              : QueryConvexHull, matador QueryConvexHull object to calculat distances,
+        mutation_rate     : float, rate at which to perform single-parent mutations,
+        crossover_rate    : float, rate at which to perform crossovers,
+        num_generations   : int, number of generations to breed before quitting,
+        num_survivors     : int, number of structures to survive to next generation for breeding,
+        population        : int, number of structures to breed in any given generation,
+        elitism           : float, fraction of next generation to be comprised of elite structures from previous generation,
+        mutations         : list(str) list of mutation names to use,
+        check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check unrelaxed mutant) [NOT YET IMPLEMENTED]
+        max_num_mutations : int, maximum number of mutations to perform on a single structure,
+        max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
+        monitor           : bool, whether or not to restart nodes that fail unexpectedly,
+        nodes             : list(str), list of node names to run on,
+        ncores            : int, or list of integers specifying the number of cores used by <nodes> per thread,
+        nprocs            : int, number of threads to run per node,
+        recover_from      : str, recover from previous run_hash,
+        load_only         : bool, only load structures, do not continue breeding,
+        executable        : str, path to DFT binary,
+        debug             : bool, printing level,
+        testing           : bool, run test code only if true,
+        verbosity         : int, extra printing level,
+        loglevel          : str, follows std library logging levels.
+
     """
     def __init__(self,
                  gene_pool=None,
@@ -44,13 +73,14 @@ class ArtificialSelector(object):
                  num_survivors=10,
                  population=25,
                  elitism=0.2,
-                 ncores=None,
-                 nprocs=1,
                  mutations=None,
-                 monitor=False,
+                 check_dupes=2,
                  max_num_mutations=3,
                  max_num_atoms=40,
+                 monitor=False,
                  nodes=None,
+                 ncores=None,
+                 nprocs=1,
                  recover_from=None,
                  load_only=False,
                  executable='castep',
@@ -93,6 +123,10 @@ class ArtificialSelector(object):
         assert isinstance(self.max_num_mutations, int)
         self.max_num_atoms = max_num_atoms
         assert isinstance(self.max_num_atoms, int)
+        self.check_dupes = int(check_dupes)
+        assert self.check_dupes in [0, 1, 2]
+        if self.check_dupes == 2:
+            raise NotImplementedError
 
         # set up logistics
         self.run_hash = generate_hash()
@@ -310,15 +344,22 @@ class ArtificialSelector(object):
                                         result['mutations'] = newborns[proc[0]]['mutations']
 
                                     result = strip_useless(result)
-                                    next_gen.birth(result)
+                                    dupe = self.is_newborn_dupe(result)
+                                    if dupe and self.check_dupes in [1, 2]:
+                                        status = 'Duplicate'
+                                        logging.debug('Newborn {} is a duplicate and will not be included.'
+                                                      .format(', '.join(newborns[proc[0]]['source'])))
+                                        with open(self.run_hash+'-dupe.json', 'a') as f:
+                                            dump(result, f, sort_keys=False, indent=2)
+                                    else:
+                                        next_gen.birth(result)
 
-                                    logging.info('Newborn {} added to next generation.'
-                                                 .format(', '.join(newborns[proc[0]]['source'])))
-                                    logging.info('Current generation size: {}'
-                                                 .format(len(next_gen)))
-
-                                    next_gen.dump('current')
-                                    logging.debug('Dumping json file for interim generation...')
+                                        logging.info('Newborn {} added to next generation.'
+                                                     .format(', '.join(newborns[proc[0]]['source'])))
+                                        logging.info('Current generation size: {}'
+                                                     .format(len(next_gen)))
+                                        next_gen.dump('current')
+                                        logging.debug('Dumping json file for interim generation...')
                                 else:
                                     status = 'Failed'
                                     result = strip_useless(result)
@@ -481,3 +522,9 @@ class ArtificialSelector(object):
 
         print(self.generations[-1])
         return
+
+    def is_newborn_dupe(self, newborn):
+        """ Check each generation for a duplicate structure to the current newborn,
+        using PDF calculator from matador.
+        """
+        return any([gen.is_dupe(newborn) for gen in self.generations])

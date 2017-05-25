@@ -80,14 +80,18 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     if num_iter == max_restarts:
         logging.warning('Max restarts reached in mutations, something has gone wrong...\
                          running with possibly unphysical cell')
+        newborn = adapt(possible_parents, mutation_rate, crossover_rate,
+                        mutations=mutations, max_num_mutations=max_num_mutations,
+                        max_num_atoms=max_num_atoms, debug=debug)
     # set parents in newborn dict
-    newborn['parents'] = []
-    for parent in parents:
-        for source in parent['source']:
-            if source.endswith('.res') or source.endswith('.castep'):
-                parent_source = source.split('/')[-1] \
-                                      .replace('.res', '').replace('.castep', '')
-        newborn['parents'].append(parent_source)
+    if 'parents' not in newborn:
+        newborn['parents'] = []
+        for parent in parents:
+            for source in parent['source']:
+                if source.endswith('.res') or source.endswith('.castep'):
+                    parent_source = source.split('/')[-1] \
+                                          .replace('.res', '').replace('.castep', '')
+            newborn['parents'].append(parent_source)
     return newborn
 
 
@@ -123,7 +127,7 @@ def check_feasible(mutant, parents):
             parents[ind]['cell_volume'] = cart2volume(parent['lattice_cart'])
         parent_densities.append(parent['num_atoms'] / parent['cell_volume'])
     target_density = sum(parent_densities) / len(parent_densities)
-    if number_density > 1.25 * target_density or number_density < 0.75 * target_density:
+    if number_density > 1.5 * target_density or number_density < 0.5 * target_density:
         logging.debug('Mutant with {} failed number density.'.format(', '.join(mutant['mutations'])))
         return False
     # now check element-agnostic minseps
