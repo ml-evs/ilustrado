@@ -84,20 +84,26 @@ class Generation():
             self.bourgeoisie.extend(elites)
 
     def calc_pdfs(self):
+        """ Compute PDFs of entire generation. """
         self._pdfs = []
+        self._stoichs = []
         for structure in self.populace:
             self._pdfs.append(PDF(structure, projected=True))
+            self._stoichs.append(sorted(structure['stoichiometry']))
 
     def is_dupe(self, doc):
+        """ Compare current doc with all other structures at same stoichiometry. """
         new_pdf = PDF(doc, projected=True)
-        for pdf in self.pdfs:
-            dist = new_pdf.get_sim_distance(pdf, projected=True)
-            if dist < 5e-2:
-                return True
+        for ind, pdf in enumerate(self.pdfs):
+            if sorted(doc['stoichiometry']) == self._stoichs[ind]:
+                dist = new_pdf.get_sim_distance(pdf, projected=True)
+                if dist < 5e-2:
+                    return True
         return False
 
     @property
     def pdfs(self):
+        """ Returns list of PDFs for generation, calculating if necessary. """
         try:
             return self._pdfs
         except(AttributeError, AssertionError):
