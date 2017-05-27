@@ -56,10 +56,6 @@ def permute_atoms(mutant, debug=False):
     num_atoms = mutant['num_atoms']
     initial_atoms = deepcopy(mutant['atom_types'])
 
-    # return non-mutated structure if only one atom type
-    if len(mutant['stoichiometry']) == 1:
-        return mutant
-
     # choose atoms to swap
     idx_a = np.random.randint(0, num_atoms-1)
     idx_b = idx_a
