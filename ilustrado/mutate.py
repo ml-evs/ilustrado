@@ -4,6 +4,7 @@ mutations.
 """
 import numpy as np
 import logging
+from traceback import print_exc
 from copy import deepcopy
 from matador.utils.cell_utils import cart2abc
 from matador.utils.chem_utils import get_stoich
@@ -17,13 +18,18 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     attempts = 0
     max_attempts = 100
     while parent == mutant and attempts < max_attempts:
-        _mutate(mutant,
-                mutations=mutations,
-                max_num_mutations=max_num_mutations,
-                debug=debug)
+        try:
+            _mutate(mutant,
+                    mutations=mutations,
+                    max_num_mutations=max_num_mutations,
+                    debug=debug)
+        except:
+            print_exc()
+            logging.warning('Issue with {}'.format(mutations))
         attempts += 1
     if attempts == max_attempts:
         logging.warning('Failed to mutate with {}'.format(mutations))
+        return parent
 
     return mutant
 
