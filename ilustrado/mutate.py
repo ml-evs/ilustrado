@@ -63,17 +63,20 @@ def permute_atoms(mutant, debug=False):
     initial_atoms = deepcopy(mutant['atom_types'])
 
     # choose atoms to swap
+    valid = True
     idx_a = np.random.randint(0, num_atoms-1)
-    idx_b = idx_a
-    while mutant['atom_types'][idx_a] == mutant['atom_types'][idx_b]:
+    idx_b = np.random.randint(0, num_atoms-1)
+    while not valid:
+        if mutant['atom_types'][idx_a] != mutant['atom_types'][idx_b]:
+            valid = True
         idx_b = np.random.randint(0, num_atoms-1)
 
     # swap atoms
     if debug:
         print(idx_b, mutant['atom_types'][idx_b], idx_a, mutant['atom_types'][idx_a])
-    temp = mutant['atom_types'][idx_b]
-    mutant['atom_types'][idx_b] = mutant['atom_types'][idx_a]
-    mutant['atom_types'][idx_a] = temp
+    temp = deepcopy(mutant['atom_types'][idx_b])
+    mutant['atom_types'][idx_b] = deepcopy(mutant['atom_types'][idx_a])
+    mutant['atom_types'][idx_a] = deepcopy(temp)
 
     if debug:
         print(list(zip(range(0, num_atoms), initial_atoms, mutant['atom_types'])))
