@@ -11,7 +11,8 @@ __version__ = require('matador')[0].version
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
-from matador.export import generate_hash
+from matador.export import generate_hash, doc2res
+from matador.similarity.similarity import get_uniq_cursor
 from matador.utils.chem_utils import get_formula_from_stoich
 # external libraries
 import numpy as np
@@ -19,7 +20,7 @@ import numpy as np
 import multiprocessing as mp
 import subprocess as sp
 import logging
-from os import listdir
+from os import listdir, makedirs
 from os.path import isfile
 from time import sleep
 from traceback import print_exc
@@ -74,7 +75,7 @@ class ArtificialSelector(object):
                  population=25,
                  elitism=0.2,
                  mutations=None,
-                 check_dupes=2,
+                 check_dupes=1,
                  max_num_mutations=3,
                  max_num_atoms=40,
                  monitor=False,
@@ -476,6 +477,7 @@ class ArtificialSelector(object):
             exit('Something went wrong when reloading run {}'.format(self.run_hash))
         assert len(self.generations) > 1
         for i in range(len(self.generations)):
+            self.generations[i].clean()
             self.generations[i].set_bourgeoisie()
         return
 
@@ -528,3 +530,18 @@ class ArtificialSelector(object):
         using PDF calculator from matador.
         """
         return any([gen.is_dupe(newborn) for gen in self.generations])
+
+    def finalise_files_for_export(self):
+        """ Move unique structures from gen1 onwards to folder "<run_hash>-results". """
+        path = '{}-results'.format(self.run_hash)
+        makedirs(path.format(self.run_hash), exist_ok=True)
+        cursor = [struc for gen in self.generations[1:] for struc in gen]
+        uniq_inds, _, _, _, = get_uniq_cursor(cursor, projected=True)
+        cursor = [cursor[ind] for ind in uniq_inds]
+        for doc in cursor:
+            source = [src.replace('.castep', '.res') for src in doc['source'] if src.endswith('.castep') or src.endswith('.res')]
+            if len(source) == 0:
+                print('Issue writing {}'.format(doc['source']))
+                continue
+            else:
+                doc2res(doc, '{}/{}'.format(path, source[0]), overwrite=False, hash_dupe=False)
