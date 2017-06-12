@@ -13,7 +13,18 @@ from traceback import print_exc
 
 
 class Generation():
-    """ Stores each generation of structures. """
+    """ Stores each generation of structures.
+
+    Args:
+        run_hash           : str, hash for this GA run,
+        generation_idx     : int, index of this generation,
+        num_survivors      : int, number of structures to aim for per generation,
+        num_accepted       : int, number to accept from this generation, i.e. excluding elites,
+        populace           : list(dict), initial structures to populate generation with (optional),
+        dumpfile           : str, dumpfile name for this generation (optional),
+        fitness_calculator : str, fitness metric to use, e.g. 'hull'.
+
+    """
 
     def __init__(self, run_hash, generation_idx, num_survivors, num_accepted,
                  populace=None, dumpfile=None, fitness_calculator=None):
@@ -73,13 +84,44 @@ class Generation():
     def clean(self):
         """ Remove structures with pathological formation enthalpies. """
         init_len = len(self.populace)
-        self.populace = [populum for populum in self.populace if populum['formation_enthalpy_per_atom'] > -3.5]
+        self.populace = [populum for populum in self.populace if
+                         (populum['formation_enthalpy_per_atom'] > -3.5 and populum['formation_enthalpy_per_atom'] < 1)]
         return init_len-len(self.populace)
 
-    def set_bourgeoisie(self, elites=None):
+    def set_bourgeoisie(self, elites=None, best_from_stoich=True):
+        """ Set the list of structures that will continue to the next generation.
+
+        Args:
+
+            elites            : list of elite structures from previous generations to include,
+            best_from_stoich  : bool, whether to include one structure from each stoichiometry.
+
+        """
+
+        # first populate with best precomputd "num_accepted" structures, where "num_accepted"
+        # takes into account the number of elites
         self.bourgeoisie = sorted(self.populace,
                                   key=lambda member: member['fitness'],
                                   reverse=True)[:self._num_accepted]
+
+        # find the fittest structure from each stoichiometry sampled
+        if best_from_stoich:
+            best_from_stoichs = dict()
+            for struc in self.populace:
+                stoich = get_formula_from_stoich(sorted(struc['stoichiometry']))
+                best_from_stoichs[stoich] = {'fitness': 0}
+            for struc in self.populace:
+                stoich = get_formula_from_stoich(sorted(struc['stoichiometry']))
+                if best_from_stoichs[stoich]['fitness'] < struc['fitness']:
+                    best_from_stoichs[stoich] = struc
+
+            # if its not already included, add the best structure from this stoichiometry
+            # in exchange for the least fit structure already included
+            for stoich in best_from_stoichs:
+                if best_from_stoichs[stoich] not in self.bourgeoisie:
+                    self.bourgeoisie.pop()
+                    self.bourgeoisie.insert(0, best_from_stoichs[stoich])
+
         if elites is not None:
             self.bourgeoisie.extend(elites)
 

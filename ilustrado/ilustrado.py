@@ -46,6 +46,7 @@ class ArtificialSelector(object):
         num_survivors     : int, number of structures to survive to next generation for breeding,
         population        : int, number of structures to breed in any given generation,
         elitism           : float, fraction of next generation to be comprised of elite structures from previous generation,
+        best_from_stoich  : bool, whether to always include the best structure from a stoichiomtery in the next generation,
         mutations         : list(str) list of mutation names to use,
         check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check unrelaxed mutant) [NOT YET IMPLEMENTED]
         max_num_mutations : int, maximum number of mutations to perform on a single structure,
@@ -74,6 +75,7 @@ class ArtificialSelector(object):
                  num_survivors=10,
                  population=25,
                  elitism=0.2,
+                 best_from_stoich=True,
                  mutations=None,
                  check_dupes=1,
                  max_num_mutations=3,
@@ -112,6 +114,7 @@ class ArtificialSelector(object):
         self.num_accepted = self.num_survivors - self.num_elite
         assert self.num_survivors < self.population + self.num_elite, 'Survivors > population!'
         assert self.num_accepted < self.population, 'Accepted > population!'
+        self.best_from_stoich = best_from_stoich
         self.generations = []  # list to store all generations
         self.hull = hull  # QueryConvexHull object to calculate hull fitness
         self.fitness_metric = fitness_metric  # choose method of ranking structures
@@ -437,7 +440,7 @@ class ArtificialSelector(object):
             if self.debug:
                 print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
                                                            doc['hull_distance']))
-        next_gen.set_bourgeoisie(elites=elites)
+        next_gen.set_bourgeoisie(elites=elites, best_from_stoich=self.best_from_stoich)
 
         logging.info('Added elite structures from previous generation to next gen.')
         logging.info('New length of next gen: {}.'.format(len(next_gen)))
@@ -478,7 +481,7 @@ class ArtificialSelector(object):
         assert len(self.generations) > 1
         for i in range(len(self.generations)):
             self.generations[i].clean()
-            self.generations[i].set_bourgeoisie()
+            self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
         return
 
     def seed_generation_0(self, gene_pool):
