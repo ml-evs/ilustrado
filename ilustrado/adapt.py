@@ -5,6 +5,7 @@ from .crossover import crossover
 from matador.utils.cell_utils import cart2volume, frac2cart, cart2abc
 from scipy.spatial.distance import cdist
 from itertools import product
+from traceback import print_exc
 import numpy as np
 import logging
 
@@ -66,16 +67,29 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         # if random number is less than mutant rate, then mutate
         if mutation_rand_seed < mutation_rate:
             parent = np.random.choice(possible_parents)
-            newborn = mutate(parent,
-                             mutations=_mutations,
-                             max_num_mutations=max_num_mutations,
-                             debug=debug)
-            parents = [parent]
+            try:
+                newborn = mutate(parent,
+                                 mutations=_mutations,
+                                 max_num_mutations=max_num_mutations,
+                                 debug=debug)
+                parents = [parent]
+                valid_cell = check_feasible(newborn, parents, max_num_atoms)
+            except Exception as oops:
+                if debug:
+                    print_exc()
+                logging.warning('Mutation failed with error {}'.format(oops))
+                valid_cell = False
         # otherwise, do crossover
         else:
             parents = np.random.choice(possible_parents, size=2, replace=False)
-            newborn = crossover(parents, debug=debug)
-        valid_cell = check_feasible(newborn, parents)
+            try:
+                newborn = crossover(parents, debug=debug)
+                valid_cell = check_feasible(newborn, parents, max_num_atoms)
+            except Exception as oops:
+                if debug:
+                    print_exc()
+                logging.warning('Crossover failed with error {}'.format(oops))
+                valid_cell = False
         num_iter += 1
     if num_iter == max_restarts:
         logging.warning('Max restarts reached in mutations, something has gone wrong...\
@@ -95,7 +109,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     return newborn
 
 
-def check_feasible(mutant, parents):
+def check_feasible(mutant, parents, max_num_atoms):
     """ Check if a mutated/newly-born cell is "feasible".
 
     Here, feasible means:
@@ -116,7 +130,12 @@ def check_feasible(mutant, parents):
         feasibility : bool determined by points above.
 
     """
-
+    # check number of atoms first
+    if 'num_atoms' not in mutant or 'num_atoms' != len(mutant['atom_types']):
+        mutant['num_atoms'] = len(mutant['atom_types'])
+    if mutant['num_atoms'] > max_num_atoms:
+        logging.debug('Mutant with {} contained too many atoms.'.format(', '.join(mutant['mutations'])))
+        return False
     # check number density first
     if 'cell_volume' not in mutant:
         mutant['cell_volume'] = cart2volume(mutant['lattice_cart'])
