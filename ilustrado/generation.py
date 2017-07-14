@@ -98,7 +98,7 @@ class Generation():
 
         """
 
-        # first populate with best precomputd "num_accepted" structures, where "num_accepted"
+        # first populate with best precomputed "num_accepted" structures, where "num_accepted"
         # takes into account the number of elites
         self.bourgeoisie = sorted(self.populace,
                                   key=lambda member: member['fitness'],

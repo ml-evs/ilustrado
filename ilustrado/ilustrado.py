@@ -14,12 +14,14 @@ from matador.compute import FullRelaxer
 from matador.export import generate_hash, doc2res
 from matador.similarity.similarity import get_uniq_cursor
 from matador.utils.chem_utils import get_formula_from_stoich
+from matador.hull import QueryConvexHull
 # external libraries
 import numpy as np
 # standard library
 import multiprocessing as mp
 import subprocess as sp
 import logging
+import glob
 from os import listdir, makedirs
 from os.path import isfile
 from time import sleep
@@ -40,6 +42,7 @@ class ArtificialSelector(object):
         seed              : str, seed name of cell and param files for CASTEP,
         fitness_metric    : str, currently either 'hull' or 'test',
         hull              : QueryConvexHull, matador QueryConvexHull object to calculat distances,
+        res_path          : str, path to folder of res files to create hull, if no hull object passed
         mutation_rate     : float, rate at which to perform single-parent mutations,
         crossover_rate    : float, rate at which to perform crossovers,
         num_generations   : int, number of generations to breed before quitting,
@@ -69,6 +72,7 @@ class ArtificialSelector(object):
                  seed=None,
                  fitness_metric='hull',
                  hull=None,
+                 res_path=None,
                  mutation_rate=1.0,
                  crossover_rate=0.0,
                  num_generations=5,
@@ -193,6 +197,14 @@ class ArtificialSelector(object):
 
             # initialise fitness calculator
             if self.fitness_metric == 'hull' and self.hull is None:
+                if res_path is not None and isfile(res_path):
+                    res_files = glob.glob('{}/*.res'.format(res_path))
+                    if len(res_files) == 0:
+                        exit('No strucutres found in {}'.format(res_path))
+                    self.cursor = []
+                    for res in res_files:
+                        self.cursor.append(res2dict(res))
+                    self.hull = QueryConvexHull(cursor=self.cursor)
                 exit('Need to pass a QueryConvexHull object to use hull distance metric.')
             if self.fitness_metric in ['dummy', 'hull_test']:
                 self.testing = True
@@ -286,14 +298,14 @@ class ArtificialSelector(object):
                                          ', '.join(newborns[-1]['mutations'])))
                     if self.testing:
                         from ilustrado.util import FakeFullRelaxer
-                        relaxer = FakeFullRelaxer(ncores, None, node,
-                                                  newborns[-1], self.param_dict, self.cell_dict,
+                        relaxer = FakeFullRelaxer(ncores=ncores, nnodes=None, node=node,
+                                                  res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
                                                   debug=False, verbosity=self.verbosity,
                                                   reopt=False, executable=self.executable,
                                                   start=False, redirect=False)
                     else:
-                        relaxer = FullRelaxer(ncores, None, node,
-                                              newborns[-1], self.param_dict, self.cell_dict,
+                        relaxer = FullRelaxer(ncores=ncores, nnodes=None, node=node,
+                                              res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
                                               debug=False, verbosity=self.verbosity,
                                               reopt=False, executable=self.executable,
                                               start=False, redirect=False)
@@ -433,17 +445,20 @@ class ArtificialSelector(object):
         logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1, cleaned))
 
         # add random elite structures from previous gen
-        elites = []
-        for i in range(self.num_elite):
-            doc = deepcopy(np.random.choice(self.generations[-1].bourgeoisie))
-            elites.append(doc)
+        if self.num_elite <= len(self.generations[-1].bourgeoisie):
+            elites = deepcopy(np.random.choice(self.generations[-1].bourgeoisie, self.num_elite, replace=False))
+        else:
+            elites = deepcopy(self.generations[-1].bourgeoisie)
             if self.debug:
-                print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
-                                                           doc['hull_distance']))
+                for doc in elites:
+                    print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
+                                                               doc['hull_distance']))
+
         next_gen.set_bourgeoisie(elites=elites, best_from_stoich=self.best_from_stoich)
 
         logging.info('Added elite structures from previous generation to next gen.')
         logging.info('New length of next gen: {}.'.format(len(next_gen)))
+        logging.info('New length of bourgeoisie: {}.'.format(len(next_gen.bourgeoisie)))
 
         self.generations.append(next_gen)
         logging.info('Added current generation {} to generation list.'
