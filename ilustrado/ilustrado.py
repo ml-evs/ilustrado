@@ -514,7 +514,8 @@ class ArtificialSelector(object):
             # else, expect a list of matador documents
             self.gene_pool = gene_pool
             for ind, parent in enumerate(self.gene_pool):
-                del self.gene_pool[ind]['_id']
+                if '_id' in parent:
+                    del self.gene_pool[ind]['_id']
                 self.gene_pool[ind]['fitness'] = -1
                 self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
 

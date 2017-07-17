@@ -10,10 +10,16 @@ import numpy as np
 
 class FakeFullRelaxer(object):
     """ Fake Relaxer for testing. """
-    def __init__(self, ncores, nnodes, node, structure, params, cell, **kwargs):
-        self.structure = structure
+    def __init__(self, res, param_dict, cell_dict,
+                 ncores, nnodes, node,
+                 executable='castep', rough=None, spin=False,
+                 reopt=False, custom_params=False,
+                 kpts_1D=False, conv_cutoff=None, conv_kpt=None, archer=False, bnl=False,
+                 start=True, redirect=False, verbosity=0, debug=False):
+        self.structure = res
 
     def relax(self, output_queue=None):
+        self.structure['enthalpy_per_atom'] = np.random.rand()
         if np.random.rand() < 0.8:
             self.structure['optimised'] = True
         else:
