@@ -89,6 +89,7 @@ class ArtificialSelector(object):
                  ncores=None,
                  nprocs=1,
                  recover_from=None,
+                 relaxer_params=None,
                  load_only=False,
                  executable='castep',
                  debug=False,
@@ -125,6 +126,10 @@ class ArtificialSelector(object):
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
         self.mutations = mutations
+        if relaxer_params is not None:
+            self.relaxer_params = relaxer_params
+        else:
+            self.relaxer_params = dict()
         if self.mutations is not None and isinstance(self.mutations, str):
             self.mutations = [self.mutations]
         self.max_num_mutations = max_num_mutations
@@ -308,7 +313,7 @@ class ArtificialSelector(object):
                                               res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
                                               debug=False, verbosity=self.verbosity,
                                               reopt=False, executable=self.executable,
-                                              start=False, redirect=False)
+                                              start=False, redirect=False, **self.relaxer_params)
                     queues.append(mp.Queue())
                     # store proc object with structure ID, node name, output queue and number of cores
                     procs.append((newborn_id, node,
