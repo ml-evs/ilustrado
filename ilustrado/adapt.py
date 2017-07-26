@@ -37,33 +37,34 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     crossover_rate /= total_rate
     assert mutation_rate + crossover_rate == 1.0
     mutation_rand_seed = np.random.rand()
+
+    # turn specified mutations string into corresponding functions
+    if mutations is not None:
+        _mutations = []
+        from .mutate import nudge_positions, null_nudge_positions, permute_atoms
+        from .mutate import random_strain, vacancy, voronoi_shuffle
+        for mutation in mutations:
+            if mutation is 'nudge_positions':
+                _mutations.append(nudge_positions)
+            elif mutation is 'null_nudge_positions':
+                _mutations.append(null_nudge_positions)
+            elif mutation is 'permute_atoms':
+                _mutations.append(permute_atoms)
+            elif mutation is 'random_strain':
+                _mutations.append(random_strain)
+            elif mutation is 'voronoi':
+                _mutations.append(voronoi_shuffle)
+            elif mutation is 'vacancy':
+                _mutations.append(vacancy)
+    else:
+        _mutations = None
+
     # loop over *SAME* branch (i.e. crossover vs mutation) until valid cell is produced
     # with max attempts of 1000, at which point everything will crash
     valid_cell = False
     max_restarts = 1000
     num_iter = 0
     while not valid_cell and num_iter < max_restarts:
-        # turn specified mutations string into corresponding functions
-        if mutations is not None:
-            _mutations = []
-            from .mutate import nudge_positions, null_nudge_positions, permute_atoms
-            from .mutate import random_strain, vacancy, voronoi_shuffle
-            for mutation in mutations:
-                if mutation is 'nudge_positions':
-                    _mutations.append(nudge_positions)
-                elif mutation is 'null_nudge_positions':
-                    _mutations.append(null_nudge_positions)
-                elif mutation is 'permute_atoms':
-                    _mutations.append(permute_atoms)
-                elif mutation is 'random_strain':
-                    _mutations.append(random_strain)
-                elif mutation is 'voronoi':
-                    _mutations.append(voronoi_shuffle)
-                elif mutation is 'vacancy':
-                    _mutations.append(vacancy)
-        else:
-            _mutations = None
-
         # if random number is less than mutant rate, then mutate
         if mutation_rand_seed < mutation_rate:
             parent = np.random.choice(possible_parents)
@@ -102,14 +103,14 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         newborn['parents'] = []
         for parent in parents:
             for source in parent['source']:
-                if source.endswith('.res') or source.endswith('.castep'):
+                if '-GA-' in source or source.endswith('.res') or source.endswith('.castep'):
                     parent_source = source.split('/')[-1] \
                                           .replace('.res', '').replace('.castep', '')
             newborn['parents'].append(parent_source)
     return newborn
 
 
-def check_feasible(mutant, parents, max_num_atoms):
+def check_feasible(mutant, parents, max_num_atoms, debug=False):
     """ Check if a mutated/newly-born cell is "feasible".
 
     Here, feasible means:
@@ -134,7 +135,10 @@ def check_feasible(mutant, parents, max_num_atoms):
     if 'num_atoms' not in mutant or 'num_atoms' != len(mutant['atom_types']):
         mutant['num_atoms'] = len(mutant['atom_types'])
     if mutant['num_atoms'] > max_num_atoms:
-        logging.debug('Mutant with {} contained too many atoms.'.format(', '.join(mutant['mutations'])))
+        message = 'Mutant with {} contained too many atoms.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
         return False
     # check number density first
     if 'cell_volume' not in mutant:
@@ -147,7 +151,10 @@ def check_feasible(mutant, parents, max_num_atoms):
         parent_densities.append(parent['num_atoms'] / parent['cell_volume'])
     target_density = sum(parent_densities) / len(parent_densities)
     if number_density > 1.5 * target_density or number_density < 0.5 * target_density:
-        logging.debug('Mutant with {} failed number density.'.format(', '.join(mutant['mutations'])))
+        message = 'Mutant with {} failed number density.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
         return False
     # now check element-agnostic minseps
     if 'positions_abs' not in mutant:
@@ -162,19 +169,31 @@ def check_feasible(mutant, parents, max_num_atoms):
     distances = np.ma.masked_where(distances < 1e-12, distances)
     distances = distances.compressed()
     if np.min(distances) <= 1.4:
-        logging.debug('Mutant with {} failed minsep check.'.format(', '.join(mutant['mutations'])))
+        message = 'Mutant with {} failed minsep check.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
         return False
     # check all cell angles are between 60 and 120.
     if 'lattice_abc' not in mutant:
         mutant['lattice_abc'] = cart2abc(mutant['lattice_cart'])
-    for i in range(3):
-        if mutant['lattice_abc'][1][i] < 50:
-            logging.debug('Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations'])))
+    if all([angle < 30 for angle in mutant['lattice_abc'][1]]):
+        message = 'Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
             return False
-        elif mutant['lattice_abc'][1][i] > 130:
-            logging.debug('Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations'])))
-            return False
+    if all([angle > 120 for angle in mutant['lattice_abc'][1]]):
+        message = 'Mutant with {} failed cell angle check.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
+        return False
     # check that we haven't deleted/transmuted all atoms of a certain type
     if len(set(mutant['atom_types'])) < len(set(parents[0]['atom_types'])):
+        message = 'Mutant with {} transmutation error.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
         return False
     return True
