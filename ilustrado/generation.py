@@ -47,6 +47,7 @@ class Generation():
         gen_string = '\nCompleted generation {}:\n'.format(self.generation_idx)
         gen_string += 'Number of members: {}\n'.format(len(self.populace))
         gen_string += 'Number of survivors: {}\n'.format(len(self.bourgeoisie))
+        gen_string += 'Populace:\n'
         gen_string += 84*'─' + '\n'
         gen_string += ('{:^10} {:^10} {:^25} {:^35}\n'
                        .format('Formula', 'Fitness', 'Hull distance (eV/atom)', 'ID'))
@@ -56,6 +57,18 @@ class Generation():
                            .format(get_formula_from_stoich(populum['stoichiometry']),
                                    populum['fitness'], populum['raw_fitness'],
                                    populum['source'][0].split('/')[-1]
+                                   .replace('.res', '').replace('.castep', '')))
+        gen_string += 84*'─' + '\n'
+        gen_string += 'Bourgeosie:\n'
+        gen_string += 84*'─' + '\n'
+        gen_string += ('{:^10} {:^10} {:^25} {:^35}\n'
+                       .format('Formula', 'Fitness', 'Hull distance (eV/atom)', 'ID'))
+        gen_string += 84*'─' + '\n'
+        for bourge in self.bourgeoisie:
+            gen_string += ('{:^10} {: ^10.5f} {:^25.5f} {:^35}\n'
+                           .format(get_formula_from_stoich(bourge['stoichiometry']),
+                                   bourge['fitness'], bourge['raw_fitness'],
+                                   bourge['source'][0].split('/')[-1]
                                    .replace('.res', '').replace('.castep', '')))
         gen_string += '\n'
         return gen_string
@@ -109,7 +122,7 @@ class Generation():
             best_from_stoichs = dict()
             for struc in self.populace:
                 stoich = get_formula_from_stoich(sorted(struc['stoichiometry']))
-                best_from_stoichs[stoich] = {'fitness': 0}
+                best_from_stoichs[stoich] = {'fitness': -1}
             for struc in self.populace:
                 stoich = get_formula_from_stoich(sorted(struc['stoichiometry']))
                 if best_from_stoichs[stoich]['fitness'] < struc['fitness']:
