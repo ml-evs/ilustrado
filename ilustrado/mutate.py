@@ -99,7 +99,7 @@ def vacancy(mutant, debug=False):
     mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
 
 
-def voronoi_shuffle(mutant, element_to_remove=None, debug=False):
+def voronoi_shuffle(mutant, element_to_remove=None, preserve_stoich=False, debug=False):
     """ Remove all atoms of type element, then perform Voronoi analysis
     on the remaining sublattice. Cluster the nodes with KMeans, then
     repopulate the clustered Voronoi nodes with atoms of the removed element.
@@ -109,18 +109,51 @@ def voronoi_shuffle(mutant, element_to_remove=None, debug=False):
     mutant['atom_types'], mutant['positions_frac'] = \
         zip(*[(atom, pos) for (atom, pos) in zip(mutant['atom_types'], mutant['positions_frac']) if atom != element_to_remove])
     num_removed = mutant['num_atoms'] - len(mutant['atom_types'])
+
+    if debug:
+        print('Removed {} atoms of type {}'.format(num_removed, element_to_remove))
+
     mutant['num_atoms'] = len(mutant['atom_types'])
     mutant['atom_types'], mutant['positions_frac'] = list(mutant['atom_types']), list(mutant['positions_frac'])
-    mutant['voronoi_nodes'] = get_voronoi_points(mutant)
+    try:
+        mutant['voronoi_nodes'] = get_voronoi_points(mutant)
+    except:
+        if debug:
+            print_exc()
+        raise RuntimeError('Voronoi code failed')
+
     if mutant['voronoi_nodes'] is False:
         raise RuntimeError('Voronoi code failed')
-    k_means = KMeans(n_clusters=num_removed, precompute_distances=True)
+
+    if debug:
+        print('Computed {} Voronoi nodes'.format(len(mutant['voronoi_nodes'])))
+
+    if preserve_stoich:
+        num_to_put_back = num_removed
+    else:
+        std_dev = int(np.sqrt(num_removed))
+        try:
+            num_to_put_back = np.random.randint(low=max(num_removed-std_dev, 1), high=min(num_removed+std_dev, len(mutant['voronoi_nodes'])))
+        except:
+            num_to_put_back = len(mutant['voronoi_nodes'])
+
+    if debug:
+        print('Going to insert {} atoms of type {}'.format(num_to_put_back, element_to_remove))
+
+    k_means = KMeans(n_clusters=num_to_put_back, precompute_distances=True)
     k_means.fit(mutant['voronoi_nodes'])
     mutant['voronoi_nodes'] = k_means.cluster_centers_.tolist()
     for node in mutant['voronoi_nodes']:
         mutant['atom_types'].append(element_to_remove)
         mutant['positions_frac'].append(node)
+
+    if debug:
+        print('Previously {} atoms in cell'.format(mutant['num_atoms']))
+
     mutant['num_atoms'] = len(mutant['atom_types'])
+    mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
+    if debug:
+        print('Now {} atoms in cell'.format(mutant['num_atoms']))
 
 
 def random_strain(mutant, debug=False):
