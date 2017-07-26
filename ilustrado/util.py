@@ -24,7 +24,6 @@ class FakeFullRelaxer(object):
             self.structure['optimised'] = True
         else:
             self.structure['optimised'] = False
-        self.structure['source'] = ['fake.res']
         output_queue.put(self.structure)
 
 
