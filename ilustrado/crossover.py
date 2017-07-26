@@ -39,13 +39,17 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
 
     if supercell:
         # check ratio of num atoms in parents and grow the smaller one
-        parent_extent_ratio = parents[0]['num_atoms'] / parents[1]['num_atoms']
+        parent_extent_ratio = parents[0]['cell_volume'] / parents[1]['cell_volume']
+        if debug:
+            print(parent_extent_ratio, parents[0]['cell_volume'], 'vs', parents[1]['cell_volume'])
         if parent_extent_ratio < 1:
             supercell_factor = int(round(1/parent_extent_ratio))
             supercell_target = 0
-        else:
+        elif parent_extent_ratio >= 1:
             supercell_factor = int(round(parent_extent_ratio))
             supercell_target = 1
+        if debug:
+            print(supercell_target, supercell_factor)
         supercell_vector = [1, 1, 1]
         if supercell_factor > 1:
             for i in range(supercell_factor):
@@ -57,6 +61,8 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
                         min_lat_vec_abs = lat_vec_abs
                         min_lat_vec_ind = i
                 supercell_vector[min_lat_vec_ind] += 1
+        if debug:
+            print('Making supercell of {} with {}'.format(parents[supercell_target]['source'][0], supercell_vector))
         if supercell_vector != [1, 1, 1]:
             parents[supercell_target] = create_simple_supercell(parents[supercell_target],
                                                                 supercell_vector,
@@ -65,6 +71,7 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
     child['atom_types'] = []
     child['lattice_cart'] = (cut_val * np.asarray(parents[0]['lattice_cart'])
                              + (child_size-cut_val) * np.asarray(parents[1]['lattice_cart']))
+    child['lattice_cart'] = child['lattice_cart'].tolist()
 
     # choose slice axis
     axis = np.random.randint(low=0, high=3)
