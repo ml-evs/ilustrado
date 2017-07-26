@@ -26,6 +26,7 @@ setup(name='ilustrado',
           'seaborn'
       ],
       extras_require={
-          'matador': ['matador']
+          'matador': ['matador'],
+          'voronoi': ['ajm_group_voronoi_code'],
       },
       zip_safe=False)
