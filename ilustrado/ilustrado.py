@@ -4,7 +4,7 @@
 from .adapt import adapt
 from .generation import Generation
 from .fitness import FitnessCalculator
-from .analysis import display_gen, fitness_swarm_plot
+from .analysis import display_gen
 from .util import strip_useless
 from pkg_resources import require
 __version__ = require('matador')[0].version
@@ -240,8 +240,8 @@ class ArtificialSelector(object):
             print('Completed GA!')
             logging.info('Reached target number of generations!')
             logging.info('Completed GA!')
-            # plot simple aitness graph
-            fitness_swarm_plot(self.generations)
+            if not self.testing:
+                self.finalise_files_for_export()
 
     def breed_generation(self):
         """ Build next generation from mutations of current,
@@ -346,7 +346,7 @@ class ArtificialSelector(object):
                                     logging.warning('Assuming {} has died, removing from node list for duration.'.format(proc[0]))
                                     self.nodes.remove(proc[1])
                                     self.nprocs -= 1
-                                if len(self.nodes) == 0:
+                                if self.monitor and len(self.nodes) == 0:
                                     logging.warning('Number of nodes reached 0, exiting...')
                                     exit('No nodes remain, exiting...')
                             if isinstance(result, dict):
@@ -432,8 +432,9 @@ class ArtificialSelector(object):
             logging.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
             for proc in procs:
                 proc[2].terminate()
-                result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
-                                stdout=sp.DEVNULL, shell=False)
+                if proc[1] is not None:
+                    result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                                    stdout=sp.DEVNULL, shell=False)
 
         if attempts >= self.max_attempts:
             logging.warning('Failed to return enough successful structures to continue...')
@@ -446,8 +447,9 @@ class ArtificialSelector(object):
 
         next_gen.rank()
         logging.info('Ranked structures in generation {}'.format(len(self.generations)-1))
-        cleaned = next_gen.clean()
-        logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1, cleaned))
+        if not self.testing:
+            cleaned = next_gen.clean()
+            logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1, cleaned))
 
         # add random elite structures from previous gen
         if self.num_elite <= len(self.generations[-1].bourgeoisie):
@@ -521,8 +523,10 @@ class ArtificialSelector(object):
             for ind, parent in enumerate(self.gene_pool):
                 if '_id' in parent:
                     del self.gene_pool[ind]['_id']
-                self.gene_pool[ind]['fitness'] = -1
                 self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
+                fitness = 1 - np.tanh(2 * self.gene_pool[ind]['raw_fitness'])
+                fitness = max(fitness, 1)
+                self.gene_pool[ind]['fitness'] = fitness
 
         # check gene pool is sensible
         try:
@@ -535,8 +539,8 @@ class ArtificialSelector(object):
 
         self.generations.append(Generation(self.run_hash,
                                            0,
-                                           self.num_survivors,
-                                           self.num_accepted,
+                                           len(gene_pool),
+                                           len(gene_pool),
                                            fitness_calculator=None,
                                            populace=self.gene_pool))
 
@@ -563,7 +567,7 @@ class ArtificialSelector(object):
         uniq_inds, _, _, _, = get_uniq_cursor(cursor, projected=True)
         cursor = [cursor[ind] for ind in uniq_inds]
         for doc in cursor:
-            source = [src.replace('.castep', '.res') for src in doc['source'] if src.endswith('.castep') or src.endswith('.res')]
+            source = [src.replace('.castep', '.res') for src in doc['source'] if '-GA-' in src or src.endswith('.castep') or src.endswith('.res')]
             if len(source) == 0:
                 print('Issue writing {}'.format(doc['source']))
                 continue
