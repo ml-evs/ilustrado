@@ -24,16 +24,16 @@ def hull_test():
         cpus = cpu_count()
 
     # prepare best structures from hull as gene pool
-    query = DBQuery(composition=['KP'], db=['KP_wtf'],
-                    kpoint_tolerance=0.03, subcmd='hull', biggest=True)
+    query = DBQuery(composition=['KP'], db=['KP'], cutoff=[650, 651],
+                    kpoint_tolerance=0.0, subcmd='hull', biggest=True, source=True)
     hull = QueryConvexHull(query,
-                           subcmd='hull', no_plot=True, kpoint_tolerance=0.03,
+                           subcmd='hull', no_plot=True, kpoint_tolerance=0.03, source=True,
                            summary=False, hull_cutoff=5e-2)
 
-    uniq_list, _, _, _ = list(get_uniq_cursor(hull.hull_cursor[1:-1], debug=False))
-    cursor = [hull.hull_cursor[1:-1][ind] for ind in uniq_list]
-    print([doc['num_atoms'] for doc in cursor])
-    cursor = [doc for doc in cursor if doc['num_atoms'] < 7]
+    # uniq_list, _, _, _ = list(get_uniq_cursor(hull.hull_cursor[1:-1], debug=False))
+    cursor = hull.hull_cursor[1:-1]
+    # print([doc['num_atoms'] for doc in cursor])
+    # cursor = [doc for doc in cursor if doc['num_atoms'] < 7]
 
     print('Running on {} cores on {}.'.format(cpus, uname()[1]))
 
@@ -45,10 +45,9 @@ def hull_test():
                        nprocs=cpus,
                        ncores=1,
                        testing=True,
-                       mutations=['null_nudge_positions'],
                        max_num_mutations=1,
-                       mutation_rate=1, crossover_rate=0,
-                       num_generations=10, population=50,
+                       mutation_rate=0.5, crossover_rate=0.5,
+                       num_generations=3, population=50,
                        num_survivors=10, elitism=0.3,
                        loglevel='debug')
 
