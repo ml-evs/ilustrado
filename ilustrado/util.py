@@ -3,13 +3,16 @@
 
 TO-DO:
 
-    * structure validation
+    * structure validation, beyond feasibility check.
+
 """
 import numpy as np
 
 
 class FakeFullRelaxer(object):
-    """ Fake Relaxer for testing. """
+    """ Fake Relaxer for testing, with same parameters as the real one
+    from matador.compute.
+    """
     def __init__(self, res, param_dict, cell_dict,
                  ncores, nnodes, node,
                  executable='castep', rough=None, spin=False,
@@ -28,7 +31,13 @@ class FakeFullRelaxer(object):
 
 
 def strip_useless(doc):
-    """ Strip useless information from a matador doc. """
+    """ Strip useless information from a matador doc.
+
+    Input:
+
+        | doc: dict, structure to strip information from.
+
+    """
     stripped_doc = dict()
     keys = ['source', 'parents', 'mutations',
             'elems', 'stoichiometry',

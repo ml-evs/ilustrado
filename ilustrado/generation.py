@@ -15,14 +15,22 @@ from traceback import print_exc
 class Generation():
     """ Stores each generation of structures.
 
+    Input:
+
+        | run_hash           : str, hash for this GA run,
+        | generation_idx     : int, index of this generation,
+        | num_survivors      : int, number of structures to aim for per
+                               generation,
+        | num_accepted       : int, number to accept from this generation, i.e.
+                               excluding elites,
+
     Args:
-        run_hash           : str, hash for this GA run,
-        generation_idx     : int, index of this generation,
-        num_survivors      : int, number of structures to aim for per generation,
-        num_accepted       : int, number to accept from this generation, i.e. excluding elites,
-        populace           : list(dict), initial structures to populate generation with (optional),
-        dumpfile           : str, dumpfile name for this generation (optional),
-        fitness_calculator : str, fitness metric to use, e.g. 'hull'.
+
+        | populace           : list(dict), initial structures to populate
+                               generation with (optional),
+        | dumpfile           : str, dumpfile name for this generation
+                               (optional),
+        | fitness_calculator : str, fitness metric to use, e.g. 'hull'.
 
     """
 
@@ -50,7 +58,9 @@ class Generation():
         gen_string += 'Populace:\n'
         gen_string += 84*'─' + '\n'
         gen_string += ('{:^10} {:^10} {:^25} {:^35}\n'
-                       .format('Formula', 'Fitness', 'Hull distance (eV/atom)', 'ID'))
+                       .format('Formula',
+                               'Fitness',
+                               'Hull distance (eV/atom)', 'ID'))
         gen_string += 84*'─' + '\n'
         for populum in self.populace:
             gen_string += ('{:^10} {: ^10.5f} {:^25.5f} {:^35}\n'
@@ -62,7 +72,9 @@ class Generation():
         gen_string += 'Bourgeosie:\n'
         gen_string += 84*'─' + '\n'
         gen_string += ('{:^10} {:^10} {:^25} {:^35}\n'
-                       .format('Formula', 'Fitness', 'Hull distance (eV/atom)', 'ID'))
+                       .format('Formula',
+                               'Fitness',
+                               'Hull distance (eV/atom)', 'ID'))
         gen_string += 84*'─' + '\n'
         for bourge in self.bourgeoisie:
             gen_string += ('{:^10} {: ^10.5f} {:^25.5f} {:^35}\n'
@@ -80,39 +92,71 @@ class Generation():
         return iter(self.populace)
 
     def dump(self, gen_suffix):
+        """ Dump the current generation to JSON file.
+
+        Input:
+
+            | gen_suffix: str, typically gen<gen_number>.
+
+        """
         with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
             json.dump(self.populace, f, sort_keys=False, indent=2)
 
     def load(self, gen_fname):
+        """ Load populace of the generation from a JSON dump.
+
+        Input:
+
+            | gen_fname: str, filename to load.
+
+        """
         with open(gen_fname, mode='r') as f:
             populace = json.load(f)
         self.populace = populace
 
     def birth(self, populum):
+        """ Add a structure to the populace.
+
+        Input:
+
+            | populum: dict, structure to add.
+
+        """
         self.populace.append(populum)
 
     def rank(self):
+        """ Evaluate the fitness of all structures in the generation. """
         self._fitness_calculator.evaluate(self)
 
     def clean(self):
-        """ Remove structures with pathological formation enthalpies. """
+        """ Remove structures with pathological formation enthalpies.
+
+        Returns:
+
+            | num_removed: int, number of pathological structures removed.
+
+        """
         init_len = len(self.populace)
         self.populace = [populum for populum in self.populace if
-                         (populum['formation_enthalpy_per_atom'] > -3.5 and populum['formation_enthalpy_per_atom'] < 1)]
+                         (populum['formation_enthalpy_per_atom'] > -3.5 and
+                          populum['formation_enthalpy_per_atom'] < 1)]
         return init_len-len(self.populace)
 
     def set_bourgeoisie(self, elites=None, best_from_stoich=True):
-        """ Set the list of structures that will continue to the next generation.
+        """ Set the structures that will continue to the next generation,
+        i.e. the bourgeoisie.
 
         Args:
 
-            elites            : list of elite structures from previous generations to include,
-            best_from_stoich  : bool, whether to include one structure from each stoichiometry.
+            | elites            : list(dict), list of elite structures to
+                                  include from the previous generation,
+            | best_from_stoich  : bool, whether to include one structure from
+                                  each stoichiometry.
 
         """
 
-        # first populate with best precomputed "num_accepted" structures, where "num_accepted"
-        # takes into account the number of elites
+        # first populate with best precomputed "num_accepted" structures,
+        # where "num_accepted" takes into account the number of elites
         self.bourgeoisie = sorted(self.populace,
                                   key=lambda member: member['fitness'],
                                   reverse=True)[:self._num_accepted]
@@ -128,8 +172,8 @@ class Generation():
                 if best_from_stoichs[stoich]['fitness'] < struc['fitness']:
                     best_from_stoichs[stoich] = struc
 
-            # if its not already included, add the best structure from this stoichiometry
-            # in exchange for the least fit structure already included
+            # if its not already included, add the best structure from this
+            # stoichiometry in exchange for the least fit structure already included
             for stoich in best_from_stoichs:
                 if best_from_stoichs[stoich] not in self.bourgeoisie:
                     self.bourgeoisie.pop()
@@ -139,7 +183,7 @@ class Generation():
             self.bourgeoisie.extend(elites)
 
     def calc_pdfs(self):
-        """ Compute PDFs of entire generation. """
+        """ Compute PDFs for each structure in the generation. """
         self._pdfs = []
         self._stoichs = []
         for structure in self.populace:
@@ -147,7 +191,13 @@ class Generation():
             self._stoichs.append(sorted(structure['stoichiometry']))
 
     def is_dupe(self, doc):
-        """ Compare current doc with all other structures at same stoichiometry. """
+        """ Compare doc with all other structures at same stoichiometry via PDF overlap.
+
+        Input:
+
+            | doc: dict, structure to compare.
+
+        """
         new_pdf = PDF(doc, projected=True)
         for ind, pdf in enumerate(self.pdfs):
             if sorted(doc['stoichiometry']) == self._stoichs[ind]:
@@ -167,26 +217,17 @@ class Generation():
 
     @property
     def fitnesses(self):
+        """ Return list of normalised fitnesses for population."""
         return [populum['fitness'] for populum in self.populace]
 
     @property
     def raw_fitnesses(self):
+        """ Return list of raw fitnesses for population. """
         return [populum['raw_fitness'] for populum in self.populace]
 
     @property
-    def most_fit(self):
-        try:
-            assert self.bourgeoisie[0]['fitness'] == max(self.fitnesses)
-        except(IndexError, AssertionError):
-            print_exc()
-            print(self.bourgeoisie)
-            print('{} != {}'.format(self.bourgeoisie[0]['fitness'], max(self.fitnesses)))
-            raise AssertionError
-
-        return self.bourgeoisie[-1]
-
-    @property
     def average_pleb_fitness(self):
+        """ Return the average normalised fitness of the generation. """
         population = len(self.populace)
         average_fitness = 0
         for populum in self.populace:
@@ -195,6 +236,7 @@ class Generation():
 
     @property
     def average_bourgeois_fitness(self):
+        """ Return the average normalised fitness of the bourgeoisie. """
         population = len(self.bourgeoisie)
         average_fitness = 0
         for populum in self.bourgeoisie:

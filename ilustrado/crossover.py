@@ -7,6 +7,19 @@ from copy import deepcopy
 
 
 def crossover(parents, method='random_slice', debug=False):
+    """ Attempt to create a child structure from two parents structures.
+
+    Input:
+
+        | parents: list(dict), list of two parent structures,
+        | method : str, currently only 'random_slice'.
+
+    Returns:
+
+        | newborn: dict, newborn structure from parents.
+
+    """
+
     if method is 'random_slice':
         _crossover = random_slice
     elif method is 'periodic_cut':
@@ -16,14 +29,22 @@ def crossover(parents, method='random_slice', debug=False):
 
 
 def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, debug=False):
-    """ Simple cut and splice crossover of two parents.
+    """ Simple cut-and-splice crossover of two parents.
+
+    The overall size of the child can vary between 0.5 and 1.5 the size of the
+    parent structures. Both parent structures are cut and spliced along the
+    same crystallographic axis.
 
     Input:
 
-        parents         : list(dict), parent structures to crossover,
-        standardize     : bool, use spglib to standardize parents before crossover,
-        supercell       : bool, make a random supercell to rescale parents,
-        shift           : bool, randomly shift atoms in parents to unbias.
+        | parents         : list(dict), parent structures to crossover,
+        | standardize     : bool, use spglib to standardize parents pre-crossover,
+        | supercell       : bool, make a random supercell to rescale parents,
+        | shift           : bool, randomly shift atoms in parents to unbias.
+
+    Returns:
+
+        | child           : dict, newborn structure from parents.
 
     """
     parents = deepcopy(parent_seeds)
@@ -31,7 +52,8 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
     # child_size is a number between 0.5 and 2
     child_size = 0.5 + 1.5*np.random.rand()
     # cut_val is a number between 0.25*child_size and 0.75*child_size
-    # the slice position of one parent in fractional coordinates (the other is (child_size-cut_val))
+    # the slice position of one parent in fractional coordinates
+    # (the other is (child_size-cut_val))
     cut_val = child_size*(0.25 + (np.random.rand() / 2.0))
 
     if standardize:
@@ -39,9 +61,11 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
 
     if supercell:
         # check ratio of num atoms in parents and grow the smaller one
-        parent_extent_ratio = parents[0]['cell_volume'] / parents[1]['cell_volume']
+        parent_extent_ratio = (parents[0]['cell_volume']
+                               / parents[1]['cell_volume'])
         if debug:
-            print(parent_extent_ratio, parents[0]['cell_volume'], 'vs', parents[1]['cell_volume'])
+            print(parent_extent_ratio, parents[0]['cell_volume'],
+                  'vs', parents[1]['cell_volume'])
         if parent_extent_ratio < 1:
             supercell_factor = int(round(1/parent_extent_ratio))
             supercell_target = 0
@@ -62,7 +86,8 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
                         min_lat_vec_ind = i
                 supercell_vector[min_lat_vec_ind] += 1
         if debug:
-            print('Making supercell of {} with {}'.format(parents[supercell_target]['source'][0], supercell_vector))
+            print('Making supercell of {} with {}'.format(parents[supercell_target]['source'][0],
+                                                          supercell_vector))
         if supercell_vector != [1, 1, 1]:
             parents[supercell_target] = create_simple_supercell(parents[supercell_target],
                                                                 supercell_vector,

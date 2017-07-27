@@ -12,21 +12,21 @@ import logging
 
 def adapt(possible_parents, mutation_rate, crossover_rate,
           mutations=None, max_num_mutations=3, max_num_atoms=40, debug=False):
-    """ Take a list of possible parents and adapt
+    """ Take a list of possible parents and randomly adapt
     according to given mutation weightings.
 
     Input:
 
-        possible_parents  : list of all breeding stock,
-        mutation_rate     : rate of mutations relative to crossover,
-        crossover_rate    : see above,
-        mutations         : list of desired mutations to choose from (as strings),
-        max_num_mutations : rand(1, this) mutations will be performed,
-        max_num_atoms     : any structures with more than this many atoms will be filtered out.
+        | possible_parents  : list(dict), list of all breeding stock,
+        | mutation_rate     : float, rate of mutations relative to crossover,
+        | crossover_rate    : float, see above,
+        | mutations         : list(str), list of desired mutations to choose from (as strings),
+        | max_num_mutations : int, rand(1, this) mutations will be performed,
+        | max_num_atoms     : int, any structures with more than this many atoms will be filtered out.
 
     Returns:
 
-        newborn           : the mutated/newborn structure.
+        | newborn           : the mutated/newborn structure.
 
     """
     total_rate = mutation_rate + crossover_rate
@@ -123,12 +123,13 @@ def check_feasible(mutant, parents, max_num_atoms, debug=False):
 
     Input:
 
-        mutant  : doc containing new structure.
-        parents : list of doc(s) containing parent structures.
+        | mutant        : dict, matador doc containing new structure.
+        | parents       : list(dict), list of doc(s) containing parent structures.
+        | max_num_atoms : int, any structures with more than this many atoms will be filtered out.
 
     Returns:
 
-        feasibility : bool determined by points above.
+        | feasibility : bool, determined by points above.
 
     """
     # check number of atoms first

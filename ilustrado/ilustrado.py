@@ -38,33 +38,33 @@ class ArtificialSelector(object):
 
     Args:
 
-        gene_pool         : list(dict), initial cursor to use as "Generation 0",
-        seed              : str, seed name of cell and param files for CASTEP,
-        fitness_metric    : str, currently either 'hull' or 'test',
-        hull              : QueryConvexHull, matador QueryConvexHull object to calculat distances,
-        res_path          : str, path to folder of res files to create hull, if no hull object passed
-        mutation_rate     : float, rate at which to perform single-parent mutations,
-        crossover_rate    : float, rate at which to perform crossovers,
-        num_generations   : int, number of generations to breed before quitting,
-        num_survivors     : int, number of structures to survive to next generation for breeding,
-        population        : int, number of structures to breed in any given generation,
-        elitism           : float, fraction of next generation to be comprised of elite structures from previous generation,
-        best_from_stoich  : bool, whether to always include the best structure from a stoichiomtery in the next generation,
-        mutations         : list(str) list of mutation names to use,
-        check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check unrelaxed mutant) [NOT YET IMPLEMENTED]
-        max_num_mutations : int, maximum number of mutations to perform on a single structure,
-        max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
-        monitor           : bool, whether or not to restart nodes that fail unexpectedly,
-        nodes             : list(str), list of node names to run on,
-        ncores            : int, or list of integers specifying the number of cores used by <nodes> per thread,
-        nprocs            : int, number of threads to run per node,
-        recover_from      : str, recover from previous run_hash,
-        load_only         : bool, only load structures, do not continue breeding,
-        executable        : str, path to DFT binary,
-        debug             : bool, printing level,
-        testing           : bool, run test code only if true,
-        verbosity         : int, extra printing level,
-        loglevel          : str, follows std library logging levels.
+        | gene_pool         : list(dict), initial cursor to use as "Generation 0",
+        | seed              : str, seed name of cell and param files for CASTEP,
+        | fitness_metric    : str, currently either 'hull' or 'test',
+        | hull              : QueryConvexHull, matador QueryConvexHull object to calculat distances,
+        | res_path          : str, path to folder of res files to create hull, if no hull object passed
+        | mutation_rate     : float, rate at which to perform single-parent mutations,
+        | crossover_rate    : float, rate at which to perform crossovers,
+        | num_generations   : int, number of generations to breed before quitting,
+        | num_survivors     : int, number of structures to survive to next generation for breeding,
+        | population        : int, number of structures to breed in any given generation,
+        | elitism           : float, fraction of next generation to be comprised of elite structures from previous generation,
+        | best_from_stoich  : bool, whether to always include the best structure from a stoichiomtery in the next generation,
+        | mutations         : list(str) list of mutation names to use,
+        | check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check unrelaxed mutant) [NOT YET IMPLEMENTED]
+        | max_num_mutations : int, maximum number of mutations to perform on a single structure,
+        | max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
+        | monitor           : bool, whether or not to restart nodes that fail unexpectedly,
+        | nodes             : list(str), list of node names to run on,
+        | ncores            : int, or list of integers specifying the number of cores used by <nodes> per thread,
+        | nprocs            : int, number of threads to run per node,
+        | recover_from      : str, recover from previous run_hash,
+        | load_only         : bool, only load structures, do not continue breeding,
+        | executable        : str, path to DFT binary,
+        | debug             : bool, printing level,
+        | testing           : bool, run test code only if true,
+        | verbosity         : int, extra printing level,
+        | loglevel          : str, follows std library logging levels.
 
     """
     def __init__(self,
@@ -244,8 +244,8 @@ class ArtificialSelector(object):
                 self.finalise_files_for_export()
 
     def breed_generation(self):
-        """ Build next generation from mutations of current,
-        and perform relaxations if necessary.
+        """ Build next generation from mutations/crossover of current and
+        perform relaxations if necessary.
         """
         next_gen = Generation(self.run_hash,
                               len(self.generations),
@@ -507,7 +507,13 @@ class ArtificialSelector(object):
         return
 
     def seed_generation_0(self, gene_pool):
-        """ Set up first generation from gene pool. """
+        """ Set up first generation from gene pool.
+
+        Input:
+
+            gene_pool: list(dict), list of structure with which to seed generation.
+
+        """
         # if gene_pool is None, try to read from res files in cwd
         if gene_pool is None:
             res_list = []
@@ -556,6 +562,14 @@ class ArtificialSelector(object):
     def is_newborn_dupe(self, newborn):
         """ Check each generation for a duplicate structure to the current newborn,
         using PDF calculator from matador.
+
+        Input:
+
+            | newborn: dict, new structure to screen against the existing,
+
+        Returns:
+
+            | True if duplicate, else False.
         """
         return any([gen.is_dupe(newborn) for gen in self.generations])
 
