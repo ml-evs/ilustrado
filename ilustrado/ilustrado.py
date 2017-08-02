@@ -205,7 +205,7 @@ class ArtificialSelector(object):
                 if res_path is not None and isfile(res_path):
                     res_files = glob.glob('{}/*.res'.format(res_path))
                     if len(res_files) == 0:
-                        exit('No strucutres found in {}'.format(res_path))
+                        exit('No structures found in {}'.format(res_path))
                     self.cursor = []
                     for res in res_files:
                         self.cursor.append(res2dict(res))
@@ -277,9 +277,9 @@ class ArtificialSelector(object):
         print('{:^25} {:^10} {:^10} {:^10} {:^30}'.format('ID', 'Formula', '# atoms', 'Status', 'Mutations'))
         print(89*'─')
         try:
-            while len(next_gen) < self.population and attempts < self.max_attempts:
+            while attempts < self.max_attempts:
                 # are we using all nodes? if not, start some processes
-                if len(procs) < self.nprocs:
+                if len(procs) < self.nprocs and len(next_gen) < self.population:
                     possible_parents = (self.generations[-1].populace
                                         if len(self.generations) == 1
                                         else self.generations[-1].bourgeoisie)
@@ -311,7 +311,7 @@ class ArtificialSelector(object):
                     else:
                         relaxer = FullRelaxer(ncores=ncores, nnodes=None, node=node,
                                               res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
-                                              debug=False, verbosity=self.verbosity,
+                                              debug=False, verbosity=self.verbosity, killcheck=True,
                                               reopt=False, executable=self.executable,
                                               start=False, redirect=False, **self.relaxer_params)
                     queues.append(mp.Queue())
@@ -414,6 +414,11 @@ class ArtificialSelector(object):
                             # break so that sometimes we skip some cycles of the while loop,
                             # but don't end up oversubmitting
                             break
+                # if we've reached the target popn, try to kill remaining processes nicely
+                if len(next_gen) >= self.population:
+                    for proc in procs:
+                        with open('{}.kill'.format(proc[0]), 'w') as f:
+                            pass
         except:
             logging.warning('Something has gone terribly wrong...')
             logging.error('Exception caught:', exc_info=True)
@@ -421,9 +426,13 @@ class ArtificialSelector(object):
             # clean up on error/interrupt
             if len(procs) > 1:
                 for proc in procs:
-                    proc[2].terminate()
-                    result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
-                                    stdout=sp.DEVNULL, shell=False)
+                    if self.nodes is None:
+                        with open('{}.kill'.format(proc[0]), 'w') as f:
+                            pass
+                    else:
+                        result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                                        stdout=sp.DEVNULL, shell=False)
+                        proc[2].terminate()
             raise SystemExit
 
         logging.info('No longer breeding structures in this generation.')
@@ -431,10 +440,13 @@ class ArtificialSelector(object):
         if len(procs) > 1:
             logging.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
             for proc in procs:
-                proc[2].terminate()
-                if proc[1] is not None:
+                if self.nodes is None:
+                    with open('{}.kill'.format(proc[0]), 'w') as f:
+                        pass
+                else:
                     result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
                                     stdout=sp.DEVNULL, shell=False)
+                    proc[2].terminate()
 
         if attempts >= self.max_attempts:
             logging.warning('Failed to return enough successful structures to continue...')
