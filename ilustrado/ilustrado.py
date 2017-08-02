@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """ This file implements the GA algorithm and acts as main(). """
 # ilustrado modules
 from .adapt import adapt
@@ -11,7 +10,7 @@ __version__ = require('matador')[0].version
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
-from matador.export import generate_hash, doc2res
+from matador.export import generate_hash, doc2res, doc2param
 from matador.similarity.similarity import get_uniq_cursor
 from matador.utils.chem_utils import get_formula_from_stoich
 from matador.hull import QueryConvexHull
@@ -22,7 +21,7 @@ import multiprocessing as mp
 import subprocess as sp
 import logging
 import glob
-from os import listdir, makedirs
+from os import listdir, makedirs, remove
 from os.path import isfile
 from time import sleep
 from traceback import print_exc
@@ -130,6 +129,9 @@ class ArtificialSelector(object):
             self.relaxer_params = relaxer_params
         else:
             self.relaxer_params = dict()
+        self.seed = seed
+        self.gene_pool = gene_pool
+        self.res_path = res_path
         if self.mutations is not None and isinstance(self.mutations, str):
             self.mutations = [self.mutations]
         self.max_num_mutations = max_num_mutations
@@ -157,7 +159,7 @@ class ArtificialSelector(object):
 
         if self.recover_from is not None:
             if isinstance(self.recover_from, str):
-                self.run_hash = self.recover_from
+                self.run_hash = self.recover_from.split('/')[-1]
 
         # set up logging
         numeric_loglevel = getattr(logging, loglevel.upper(), None)
@@ -181,67 +183,71 @@ class ArtificialSelector(object):
             self.recover()
 
         if not load_only:
-            print('Initialising quantum mechanics...', end=' ')
-            # read parameters for relaxation from seed files
-            if seed is not None:
-                self.seed = seed
-                self.cell_dict, success_cell = cell2dict(seed, db=False)
-                if not success_cell:
-                    print(self.cell_dict)
-                    exit('Failed to read cell file.')
-                self.param_dict, success_param = param2dict(seed, db=False)
-                if not success_param:
-                    print(self.param_dict)
-                    exit('Failed to read param file.')
-            elif not self.testing:
-                exit('Not in testing mode, and failed to provide seed... exiting.')
-            else:
-                self.seed = 'ga_test'
-            print('Done!\n')
-            logging.debug('Successfully initialised cell and param files.')
+            self.start()
 
-            # initialise fitness calculator
-            if self.fitness_metric == 'hull' and self.hull is None:
-                if res_path is not None and isfile(res_path):
-                    res_files = glob.glob('{}/*.res'.format(res_path))
-                    if len(res_files) == 0:
-                        exit('No structures found in {}'.format(res_path))
-                    self.cursor = []
-                    for res in res_files:
-                        self.cursor.append(res2dict(res))
-                    self.hull = QueryConvexHull(cursor=self.cursor)
-                exit('Need to pass a QueryConvexHull object to use hull distance metric.')
-            if self.fitness_metric in ['dummy', 'hull_test']:
-                self.testing = True
-            print('Done!')
-            self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
-                                                        hull=self.hull, debug=self.debug)
-            logging.debug('Successfully initialised fitness calculator.')
+    def start(self):
+        """ Start running GA. """
+        print('Initialising quantum mechanics...', end=' ')
+        # read parameters for relaxation from seed files
+        if self.seed is not None:
+            seed = self.seed
+            self.cell_dict, success_cell = cell2dict(seed, db=False)
+            if not success_cell:
+                print(self.cell_dict)
+                exit('Failed to read cell file.')
+            self.param_dict, success_param = param2dict(seed, db=False)
+            if not success_param:
+                print(self.param_dict)
+                exit('Failed to read param file.')
+        elif not self.testing:
+            exit('Not in testing mode, and failed to provide seed... exiting.')
+        else:
+            self.seed = 'ga_test'
+        print('Done!\n')
+        logging.debug('Successfully initialised cell and param files.')
 
-            if self.recover_from is None:
-                self.seed_generation_0(gene_pool)
+        # initialise fitness calculator
+        if self.fitness_metric == 'hull' and self.hull is None:
+            if self.res_path is not None and isfile(self.res_path):
+                res_files = glob.glob('{}/*.res'.format(self.res_path))
+                if len(res_files) == 0:
+                    exit('No structures found in {}'.format(self.res_path))
+                self.cursor = []
+                for res in res_files:
+                    self.cursor.append(res2dict(res))
+                self.hull = QueryConvexHull(cursor=self.cursor)
+            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
+        if self.fitness_metric in ['dummy', 'hull_test']:
+            self.testing = True
+        print('Done!')
+        self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
+                                                    hull=self.hull, debug=self.debug)
+        logging.debug('Successfully initialised fitness calculator.')
 
-            if self.debug:
-                print(self.nodes)
-            if self.nodes is not None:
-                logging.debug('Running on nodes: {}'.format(' '.join(self.nodes)))
-            else:
-                logging.debug('Running on local machine')
+        if self.recover_from is None:
+            self.seed_generation_0(self.gene_pool)
 
-            if self.debug:
-                print('Current number of generations: {}. Target number: {}'.format(len(self.generations), self.num_generations))
-            # run GA self.num_generations
-            while len(self.generations) < self.num_generations:
-                self.breed_generation()
-                logging.info('Successfully bred generation {}'.format(len(self.generations)))
+        if self.debug:
+            print(self.nodes)
+        if self.nodes is not None:
+            logging.debug('Running on nodes: {}'.format(' '.join(self.nodes)))
+        else:
+            logging.debug('Running on local machine')
 
-            assert len(self.generations) == self.num_generations
-            print('Reached target number of generations!')
-            print('Completed GA!')
-            logging.info('Reached target number of generations!')
-            logging.info('Completed GA!')
-            if not self.testing:
-                self.finalise_files_for_export()
+        if self.debug:
+            print('Current number of generations: {}. Target number: {}'.format(len(self.generations), self.num_generations))
+        # run GA self.num_generations
+        while len(self.generations) < self.num_generations:
+            self.breed_generation()
+            logging.info('Successfully bred generation {}'.format(len(self.generations)))
+
+        assert len(self.generations) == self.num_generations
+        print('Reached target number of generations!')
+        print('Completed GA!')
+        logging.info('Reached target number of generations!')
+        logging.info('Completed GA!')
+        if not self.testing:
+            self.finalise_files_for_export()
 
     def breed_generation(self):
         """ Build next generation from mutations/crossover of current and
@@ -277,7 +283,8 @@ class ArtificialSelector(object):
         print('{:^25} {:^10} {:^10} {:^10} {:^30}'.format('ID', 'Formula', '# atoms', 'Status', 'Mutations'))
         print(89*'─')
         try:
-            while attempts < self.max_attempts:
+            finished = False
+            while attempts < self.max_attempts and not finished:
                 # are we using all nodes? if not, start some processes
                 if len(procs) < self.nprocs and len(next_gen) < self.population:
                     possible_parents = (self.generations[-1].populace
@@ -332,6 +339,7 @@ class ArtificialSelector(object):
                     logging.debug('Suspected at least one dead node')
                     # then find the dead ones, collect their results and
                     # delete them so we're no longer using all nodes
+                    found_node = False
                     for ind, proc in enumerate(procs):
                         if not proc[2].is_alive():
                             logging.debug('Found dead node {}'.format(proc[1]))
@@ -350,49 +358,7 @@ class ArtificialSelector(object):
                                     logging.warning('Number of nodes reached 0, exiting...')
                                     exit('No nodes remain, exiting...')
                             if isinstance(result, dict):
-                                if self.debug:
-                                    print(proc)
-                                    print(dumps(result, sort_keys=True))
-                                if result.get('optimised'):
-                                    status = 'Relaxed'
-                                    logging.debug('Newborn {} successfully optimised'
-                                                  .format(', '.join(newborns[proc[0]]['source'])))
-                                    if result.get('parents') is None:
-                                        logging.warning(
-                                            'Failed to get parents for newborn {}.'
-                                            .format(', '.join(newborns[proc[0]]['source'])))
-                                        result['parents'] = newborns[proc[0]]['parents']
-                                        result['mutations'] = newborns[proc[0]]['mutations']
-
-                                    result = strip_useless(result)
-                                    dupe = self.is_newborn_dupe(result)
-                                    if dupe and self.check_dupes in [1, 2]:
-                                        status = 'Duplicate'
-                                        logging.debug('Newborn {} is a duplicate and will not be included.'
-                                                      .format(', '.join(newborns[proc[0]]['source'])))
-                                        with open(self.run_hash+'-dupe.json', 'a') as f:
-                                            dump(result, f, sort_keys=False, indent=2)
-                                    else:
-                                        next_gen.birth(result)
-
-                                        logging.info('Newborn {} added to next generation.'
-                                                     .format(', '.join(newborns[proc[0]]['source'])))
-                                        logging.info('Current generation size: {}'
-                                                     .format(len(next_gen)))
-                                        next_gen.dump('current')
-                                        logging.debug('Dumping json file for interim generation...')
-                                else:
-                                    status = 'Failed'
-                                    result = strip_useless(result)
-                                    with open(self.run_hash+'-failed.json', 'a') as f:
-                                        dump(result, f, sort_keys=False, indent=2)
-                                print('{:^25} {:^10} {:^10} {:^10} {:^30}'
-                                      .format(newborns[proc[0]]['source'][0],
-                                              get_formula_from_stoich(
-                                                  newborns[proc[0]]['stoichiometry']),
-                                              newborns[proc[0]]['num_atoms'],
-                                              status,
-                                              ', '.join(newborns[proc[0]]['mutations'])))
+                                self.scrape_result(result, proc, newborns, next_gen)
                             try:
                                 procs[ind][2].join(timeout=10)
                                 logging.debug('Process {} on node {} died gracefully.'
@@ -411,14 +377,29 @@ class ArtificialSelector(object):
                             del procs[ind]
                             del queues[ind]
                             attempts += 1
+                            found_node = True
                             # break so that sometimes we skip some cycles of the while loop,
                             # but don't end up oversubmitting
                             break
+                    if not found_node:
+                        sleep(10)
                 # if we've reached the target popn, try to kill remaining processes nicely
                 if len(next_gen) >= self.population:
                     for proc in procs:
-                        with open('{}.kill'.format(proc[0]), 'w') as f:
+                        try:
+                            # adjust param file to do just one more iteration
+                            params, s = param2dict('{}.param'.format(newborns[proc[0]]['source']), db=False)
+                            params['geom_max_iter'] = 1
+                            doc2param(params, '{}.param'.format(newborns[proc[0]]['source']), overwrite=True)
+                        except:
+                            logging.warning('Exception caught:', exc_info=True)
+                        # create kill file so that matador will stop next finished CASTEP
+                        with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
                             pass
+                        proc[2].join(timeout=3600)
+                        if isfile('{}.kill'.format(newborns[proc[0]]['source'][0])):
+                            remove('{}.kill'.format(newborns[proc[0]]['source'][0]))
+                    finished = True
         except:
             logging.warning('Something has gone terribly wrong...')
             logging.error('Exception caught:', exc_info=True)
@@ -427,11 +408,11 @@ class ArtificialSelector(object):
             if len(procs) > 1:
                 for proc in procs:
                     if self.nodes is None:
-                        with open('{}.kill'.format(proc[0]), 'w') as f:
+                        with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
                             pass
                     else:
-                        result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
-                                        stdout=sp.DEVNULL, shell=False)
+                        sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                               stdout=sp.DEVNULL, shell=False)
                         proc[2].terminate()
             raise SystemExit
 
@@ -441,11 +422,11 @@ class ArtificialSelector(object):
             logging.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
             for proc in procs:
                 if self.nodes is None:
-                    with open('{}.kill'.format(proc[0]), 'w') as f:
+                    with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
                         pass
                 else:
-                    result = sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
-                                    stdout=sp.DEVNULL, shell=False)
+                    sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                           stdout=sp.DEVNULL, shell=False)
                     proc[2].terminate()
 
         if attempts >= self.max_attempts:
@@ -487,6 +468,51 @@ class ArtificialSelector(object):
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
         display_gen(self.generations[-1])
 
+    def scrape_result(self, result, proc, newborns, next_gen):
+        """ Check process for result and scrape into next_gen. """
+        if self.debug:
+            print(proc)
+            print(dumps(result, sort_keys=True))
+        if result.get('optimised'):
+            status = 'Relaxed'
+            logging.debug('Newborn {} successfully optimised'
+                          .format(', '.join(newborns[proc[0]]['source'])))
+            if result.get('parents') is None:
+                logging.warning(
+                    'Failed to get parents for newborn {}.'
+                    .format(', '.join(newborns[proc[0]]['source'])))
+                result['parents'] = newborns[proc[0]]['parents']
+                result['mutations'] = newborns[proc[0]]['mutations']
+
+            result = strip_useless(result)
+            dupe = self.is_newborn_dupe(result)
+            if dupe and self.check_dupes in [1, 2]:
+                status = 'Duplicate'
+                logging.debug('Newborn {} is a duplicate and will not be included.'
+                              .format(', '.join(newborns[proc[0]]['source'])))
+                with open(self.run_hash+'-dupe.json', 'a') as f:
+                    dump(result, f, sort_keys=False, indent=2)
+            else:
+                next_gen.birth(result)
+                logging.info('Newborn {} added to next generation.'
+                             .format(', '.join(newborns[proc[0]]['source'])))
+                logging.info('Current generation size: {}'
+                             .format(len(next_gen)))
+                next_gen.dump('current')
+                logging.debug('Dumping json file for interim generation...')
+        else:
+            status = 'Failed'
+            result = strip_useless(result)
+            with open(self.run_hash+'-failed.json', 'a') as f:
+                dump(result, f, sort_keys=False, indent=2)
+        print('{:^25} {:^10} {:^10} {:^10} {:^30}'
+              .format(newborns[proc[0]]['source'][0],
+                      get_formula_from_stoich(
+                          newborns[proc[0]]['stoichiometry']),
+                      newborns[proc[0]]['num_atoms'],
+                      status,
+                      ', '.join(newborns[proc[0]]['mutations'])))
+
     def recover(self):
         """ Attempt to recover previous generations from files in cwd
         named '<run_hash>_gen{}.json'.format(gen_idx).
@@ -504,7 +530,7 @@ class ArtificialSelector(object):
                                                    self.num_accepted,
                                                    dumpfile=fname,
                                                    fitness_calculator=None))
-                logging.info('Successfully loaded generation {} from run {}.'.format(i, self.run_hash))
+                logging.info('Successfully loaded {} structures into generation {} from run {}.'.format(len(self.generations[-1]), i, self.run_hash))
                 i += 1
             print('Recovered from run {}'.format(self.run_hash))
             logging.info('Successfully loaded run {}.'.format(self.run_hash))
@@ -514,8 +540,20 @@ class ArtificialSelector(object):
             exit('Something went wrong when reloading run {}'.format(self.run_hash))
         assert len(self.generations) > 1
         for i in range(len(self.generations)):
-            self.generations[i].clean()
-            self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
+            if not self.testing:
+                removed = self.generations[i].clean()
+                logging.info('Removed {} structures from generation {}'.format(removed, i))
+            if i == len(self.generations)-1:
+                if self.num_elite <= len(self.generations[-2].bourgeoisie):
+                    elites = deepcopy(np.random.choice(self.generations[-2].bourgeoisie, self.num_elite, replace=False))
+                else:
+                    elites = deepcopy(self.generations[-2].bourgeoisie)
+                self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich, elites=elites)
+            else:
+                self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
+            logging.info('Bourgeoisie contains {} structures: generation {}'.format(len(self.generations[i].bourgeoisie), i))
+            assert len(self.generations[i]) >= 1
+            assert len(self.generations[i].bourgeoisie) >= 1
         return
 
     def seed_generation_0(self, gene_pool):

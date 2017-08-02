@@ -9,7 +9,6 @@ from matador.similarity.pdf_similarity import PDF
 # external libraries
 # standard library
 import json
-from traceback import print_exc
 
 
 class Generation():
