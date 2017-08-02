@@ -39,7 +39,7 @@ class FitnessCalculator(object):
             raise RuntimeError('No recognised fitness metric given.')
 
     def evaluate(self, generation):
-        """" Assign normalised fitnesses to an entire generation.
+        """ Assign normalised fitnesses to an entire generation.
         Normalisation uses the logistic function such that
 
         | fitness = 1 - tanh(2*distance_from_hull),
