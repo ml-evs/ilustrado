@@ -130,6 +130,7 @@ class ArtificialSelector(object):
         else:
             self.relaxer_params = dict()
         self.seed = seed
+        self.next_gen = None
         self.gene_pool = gene_pool
         self.res_path = res_path
         if self.mutations is not None and isinstance(self.mutations, str):
@@ -176,6 +177,24 @@ class ArtificialSelector(object):
                 logging.warning('Specified procs {} being replaced by number of nodes {}'.format(self.nprocs, nprocs))
         self.initial_nodes = nodes
 
+        # initialise fitness calculator
+        if self.fitness_metric == 'hull' and self.hull is None:
+            if self.res_path is not None and isfile(self.res_path):
+                res_files = glob.glob('{}/*.res'.format(self.res_path))
+                if len(res_files) == 0:
+                    exit('No structures found in {}'.format(self.res_path))
+                self.cursor = []
+                for res in res_files:
+                    self.cursor.append(res2dict(res))
+                self.hull = QueryConvexHull(cursor=self.cursor)
+            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
+        if self.fitness_metric in ['dummy', 'hull_test']:
+            self.testing = True
+        print('Done!')
+        self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
+                                                    hull=self.hull, debug=self.debug)
+        logging.debug('Successfully initialised fitness calculator.')
+
         if self.recover_from is not None:
             print('Attempting to recover from run {}'.format(self.run_hash))
             if isinstance(self.recover_from, str):
@@ -206,24 +225,6 @@ class ArtificialSelector(object):
         print('Done!\n')
         logging.debug('Successfully initialised cell and param files.')
 
-        # initialise fitness calculator
-        if self.fitness_metric == 'hull' and self.hull is None:
-            if self.res_path is not None and isfile(self.res_path):
-                res_files = glob.glob('{}/*.res'.format(self.res_path))
-                if len(res_files) == 0:
-                    exit('No structures found in {}'.format(self.res_path))
-                self.cursor = []
-                for res in res_files:
-                    self.cursor.append(res2dict(res))
-                self.hull = QueryConvexHull(cursor=self.cursor)
-            exit('Need to pass a QueryConvexHull object to use hull distance metric.')
-        if self.fitness_metric in ['dummy', 'hull_test']:
-            self.testing = True
-        print('Done!')
-        self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
-                                                    hull=self.hull, debug=self.debug)
-        logging.debug('Successfully initialised fitness calculator.')
-
         if self.recover_from is None:
             self.seed_generation_0(self.gene_pool)
 
@@ -253,11 +254,12 @@ class ArtificialSelector(object):
         """ Build next generation from mutations/crossover of current and
         perform relaxations if necessary.
         """
-        next_gen = Generation(self.run_hash,
-                              len(self.generations),
-                              self.num_survivors,
-                              self.num_accepted,
-                              fitness_calculator=self.fitness_calculator)
+        if self.next_gen is None:
+            self.next_gen = Generation(self.run_hash,
+                                       len(self.generations),
+                                       self.num_survivors,
+                                       self.num_accepted,
+                                       fitness_calculator=self.fitness_calculator)
         # newborns is a list of structures, initially raw then relaxed
         newborns = []
         # procs is a list of tuples [(newborn_id, node, proc), ...]
@@ -282,11 +284,23 @@ class ArtificialSelector(object):
         print(89*'─')
         print('{:^25} {:^10} {:^10} {:^10} {:^30}'.format('ID', 'Formula', '# atoms', 'Status', 'Mutations'))
         print(89*'─')
+        # print any recovered structures that already exist
+        if len(self.next_gen) > 0:
+            for ind, structure in enumerate(self.next_gen):
+                print('{:^25} {:^10} {:^10} {:^10} {:^30}'
+                      .format(structure['source'][0],
+                              get_formula_from_stoich(structure['stoichiometry']),
+                              structure['num_atoms'],
+                              'Recovered',
+                              ', '.join(structure['mutations'])))
+            self.used_sources = [doc['source'][0] for doc in self.next_gen]
+        else:
+            self.used_sources = []
         try:
             finished = False
             while attempts < self.max_attempts and not finished:
                 # are we using all nodes? if not, start some processes
-                if len(procs) < self.nprocs and len(next_gen) < self.population:
+                if len(procs) < self.nprocs and len(self.next_gen) < self.population:
                     possible_parents = (self.generations[-1].populace
                                         if len(self.generations) == 1
                                         else self.generations[-1].bourgeoisie)
@@ -297,12 +311,16 @@ class ArtificialSelector(object):
                                     max_num_mutations=self.max_num_mutations,
                                     max_num_atoms=self.max_num_atoms,
                                     debug=self.debug)
+                    newborn_id = len(newborns)
+                    newborn_source_id = len(self.next_gen)
+                    while '{}-GA-{}-{}x{}'.format(self.seed, self.run_hash, len(self.generations), newborn_source_id) in self.used_sources:
+                        newborn_source_id += 1
+                    self.used_sources.append('{}-GA-{}-{}x{}'.format(self.seed, self.run_hash, len(self.generations), newborn_source_id))
                     newborn['source'] = ['{}-GA-{}-{}x{}'.format(self.seed,
                                                                  self.run_hash,
                                                                  len(self.generations),
-                                                                 len(newborns))]
+                                                                 newborn_source_id)]
                     newborns.append(newborn)
-                    newborn_id = len(newborns)-1
                     node = free_nodes.pop()
                     ncores = free_cores.pop()
                     logging.info('Initialised newborn {} with mutations ({})'
@@ -358,7 +376,7 @@ class ArtificialSelector(object):
                                     logging.warning('Number of nodes reached 0, exiting...')
                                     exit('No nodes remain, exiting...')
                             if isinstance(result, dict):
-                                self.scrape_result(result, proc, newborns, next_gen)
+                                self.scrape_result(result, proc, newborns)
                             try:
                                 procs[ind][2].join(timeout=10)
                                 logging.debug('Process {} on node {} died gracefully.'
@@ -384,7 +402,7 @@ class ArtificialSelector(object):
                     if not found_node:
                         sleep(10)
                 # if we've reached the target popn, try to kill remaining processes nicely
-                if len(next_gen) >= self.population:
+                if len(self.next_gen) >= self.population:
                     for proc in procs:
                         try:
                             # adjust param file to do just one more iteration
@@ -434,14 +452,14 @@ class ArtificialSelector(object):
             print('Failed to return enough successful structures to continue, exiting...')
             exit()
 
-        if len(next_gen) < self.population:
+        if len(self.next_gen) < self.population:
             logging.warning('Next gen is smaller than desired population.')
-        assert len(next_gen) >= self.population
+        assert len(self.next_gen) >= self.population
 
-        next_gen.rank()
+        self.next_gen.rank()
         logging.info('Ranked structures in generation {}'.format(len(self.generations)-1))
         if not self.testing:
-            cleaned = next_gen.clean()
+            cleaned = self.next_gen.clean()
             logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1, cleaned))
 
         # add random elite structures from previous gen
@@ -454,22 +472,25 @@ class ArtificialSelector(object):
                     print('Adding doc {} at {} eV/atom'.format(' '.join(doc['text_id']),
                                                                doc['hull_distance']))
 
-        next_gen.set_bourgeoisie(elites=elites, best_from_stoich=self.best_from_stoich)
+        self.next_gen.set_bourgeoisie(elites=elites, best_from_stoich=self.best_from_stoich)
 
         logging.info('Added elite structures from previous generation to next gen.')
-        logging.info('New length of next gen: {}.'.format(len(next_gen)))
-        logging.info('New length of bourgeoisie: {}.'.format(len(next_gen.bourgeoisie)))
+        logging.info('New length of next gen: {}.'.format(len(self.next_gen)))
+        logging.info('New length of bourgeoisie: {}.'.format(len(self.next_gen.bourgeoisie)))
 
-        self.generations.append(next_gen)
+        self.generations.append(self.next_gen)
+        self.next_gen = None
+        assert self.generations[-1] is not None
         logging.info('Added current generation {} to generation list.'
                      .format(len(self.generations)-1))
-
+        if isfile('{}-gencurrent.json'.format(self.run_hash)):
+            remove('{}-gencurrent.json'.format(self.run_hash))
         self.generations[-1].dump(len(self.generations)-1)
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
         display_gen(self.generations[-1])
 
-    def scrape_result(self, result, proc, newborns, next_gen):
-        """ Check process for result and scrape into next_gen. """
+    def scrape_result(self, result, proc, newborns):
+        """ Check process for result and scrape into self.next_gen. """
         if self.debug:
             print(proc)
             print(dumps(result, sort_keys=True))
@@ -493,12 +514,12 @@ class ArtificialSelector(object):
                 with open(self.run_hash+'-dupe.json', 'a') as f:
                     dump(result, f, sort_keys=False, indent=2)
             else:
-                next_gen.birth(result)
+                self.next_gen.birth(result)
                 logging.info('Newborn {} added to next generation.'
                              .format(', '.join(newborns[proc[0]]['source'])))
                 logging.info('Current generation size: {}'
-                             .format(len(next_gen)))
-                next_gen.dump('current')
+                             .format(len(self.next_gen)))
+                self.next_gen.dump('current')
                 logging.debug('Dumping json file for interim generation...')
         else:
             status = 'Failed'
@@ -519,6 +540,11 @@ class ArtificialSelector(object):
         """
         if not isfile(('{}-gen0.json').format(self.run_hash)):
             exit('Failed to load run, files missing for {}'.format(self.run_hash))
+        if isfile(('{}-gencurrent.json').format(self.run_hash)):
+            incomplete = True
+            logging.info('Found incomplete generation for {}'.format(self.run_hash))
+        else:
+            incomplete = False
         try:
             i = 0
             while isfile('{}-gen{}.json'.format(self.run_hash, i)):
@@ -543,7 +569,7 @@ class ArtificialSelector(object):
             if not self.testing:
                 removed = self.generations[i].clean()
                 logging.info('Removed {} structures from generation {}'.format(removed, i))
-            if i == len(self.generations)-1:
+            if i == len(self.generations)-1 and len(self.generations) > 1:
                 if self.num_elite <= len(self.generations[-2].bourgeoisie):
                     elites = deepcopy(np.random.choice(self.generations[-2].bourgeoisie, self.num_elite, replace=False))
                 else:
@@ -554,6 +580,19 @@ class ArtificialSelector(object):
             logging.info('Bourgeoisie contains {} structures: generation {}'.format(len(self.generations[i].bourgeoisie), i))
             assert len(self.generations[i]) >= 1
             assert len(self.generations[i].bourgeoisie) >= 1
+        if incomplete:
+            logging.info('Trying to load incomplete generation from run {}.'.format(self.run_hash))
+            fname = '{}-gen{}.json'.format(self.run_hash, 'current')
+            self.next_gen = Generation(self.run_hash,
+                                       len(self.generations),
+                                       self.num_survivors,
+                                       self.num_accepted,
+                                       dumpfile=fname,
+                                       fitness_calculator=self.fitness_calculator)
+            logging.info('Successfully loaded {} structures into current generation ({}) from run {}.'.format(len(self.next_gen),
+                                                                                                              len(self.generations),
+                                                                                                              self.run_hash))
+
         return
 
     def seed_generation_0(self, gene_pool):

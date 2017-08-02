@@ -44,6 +44,7 @@ class Generation():
         self._fitness_calculator = fitness_calculator
         self.run_hash = run_hash
         self.generation_idx = generation_idx
+        self.bourgeoisie = []
         if dumpfile is not None:
             self.load(dumpfile)
 
@@ -68,7 +69,7 @@ class Generation():
                                    populum['source'][0].split('/')[-1]
                                    .replace('.res', '').replace('.castep', '')))
         gen_string += 84*'─' + '\n'
-        gen_string += 'Bourgeosie:\n'
+        gen_string += 'Bourgeoisie:\n'
         gen_string += 84*'─' + '\n'
         gen_string += ('{:^10} {:^10} {:^25} {:^35}\n'
                        .format('Formula',

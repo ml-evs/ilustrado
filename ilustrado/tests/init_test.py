@@ -64,7 +64,7 @@ def hull_test():
                                   testing=True,
                                   max_num_mutations=1,
                                   mutation_rate=0.5, crossover_rate=0.5,
-                                  num_generations=5, population=15,
+                                  num_generations=10, population=15,
                                   num_survivors=10, elitism=0.5,
                                   loglevel='debug')
     print(len(new_life.generations))
@@ -77,6 +77,7 @@ def hull_test():
 
     [remove(f) for f in glob.glob('*.json')]
     [remove(f) for f in glob.glob('*.log')]
+    [remove(f) for f in glob.glob('*.kill')]
 
 
 class MatadorHullUnitTest(unittest.TestCase):
