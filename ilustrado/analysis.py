@@ -4,11 +4,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def display_gen(generation):
-    """ Print some info about the generation. """
-    print(generation)
-
-
 def fitness_swarm_plot(generations, ax=None, save=False):
     """ Make a swarm plot of the fitness of all generations. """
     import matplotlib

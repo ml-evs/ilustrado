@@ -111,8 +111,7 @@ class Generation():
 
         """
         with open(gen_fname, mode='r') as f:
-            populace = json.load(f)
-        self.populace = populace
+            self.populace = json.load(f)
 
     def birth(self, populum):
         """ Add a structure to the populace.

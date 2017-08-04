@@ -3,7 +3,6 @@
 from .adapt import adapt
 from .generation import Generation
 from .fitness import FitnessCalculator
-from .analysis import display_gen
 from .util import strip_useless
 from pkg_resources import require
 __version__ = require('matador')[0].version
@@ -27,7 +26,7 @@ from time import sleep
 from traceback import print_exc
 from json import dumps, dump
 from sys import exit
-from copy import deepcopy
+from copy import deepcopy, copy
 
 
 class ArtificialSelector(object):
@@ -299,8 +298,25 @@ class ArtificialSelector(object):
         try:
             finished = False
             while attempts < self.max_attempts and not finished:
+                # if we've reached the target popn, try to kill remaining processes nicely
+                if len(self.next_gen) >= self.population:
+                    for proc in procs:
+                        try:
+                            # adjust param file to do just one more iteration
+                            params, s = param2dict('{}.param'.format(newborns[proc[0]]['source']), db=False)
+                            params['geom_max_iter'] = 1
+                            doc2param(params, '{}.param'.format(newborns[proc[0]]['source']), overwrite=True)
+                        except:
+                            logging.warning('Exception caught:', exc_info=True)
+                        # create kill file so that matador will stop next finished CASTEP
+                        with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
+                            pass
+                        proc[2].join(timeout=3600)
+                        if isfile('{}.kill'.format(newborns[proc[0]]['source'][0])):
+                            remove('{}.kill'.format(newborns[proc[0]]['source'][0]))
+                    finished = True
                 # are we using all nodes? if not, start some processes
-                if len(procs) < self.nprocs and len(self.next_gen) < self.population:
+                elif len(procs) < self.nprocs and len(self.next_gen) < self.population:
                     possible_parents = (self.generations[-1].populace
                                         if len(self.generations) == 1
                                         else self.generations[-1].bourgeoisie)
@@ -401,23 +417,6 @@ class ArtificialSelector(object):
                             break
                     if not found_node:
                         sleep(10)
-                # if we've reached the target popn, try to kill remaining processes nicely
-                if len(self.next_gen) >= self.population:
-                    for proc in procs:
-                        try:
-                            # adjust param file to do just one more iteration
-                            params, s = param2dict('{}.param'.format(newborns[proc[0]]['source']), db=False)
-                            params['geom_max_iter'] = 1
-                            doc2param(params, '{}.param'.format(newborns[proc[0]]['source']), overwrite=True)
-                        except:
-                            logging.warning('Exception caught:', exc_info=True)
-                        # create kill file so that matador will stop next finished CASTEP
-                        with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
-                            pass
-                        proc[2].join(timeout=3600)
-                        if isfile('{}.kill'.format(newborns[proc[0]]['source'][0])):
-                            remove('{}.kill'.format(newborns[proc[0]]['source'][0]))
-                    finished = True
         except:
             logging.warning('Something has gone terribly wrong...')
             logging.error('Exception caught:', exc_info=True)
@@ -457,10 +456,10 @@ class ArtificialSelector(object):
         assert len(self.next_gen) >= self.population
 
         self.next_gen.rank()
-        logging.info('Ranked structures in generation {}'.format(len(self.generations)-1))
+        logging.info('Ranked structures in generation {}'.format(len(self.generations)))
         if not self.testing:
             cleaned = self.next_gen.clean()
-            logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations)-1, cleaned))
+            logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations), cleaned))
 
         # add random elite structures from previous gen
         if self.num_elite <= len(self.generations[-1].bourgeoisie):
@@ -478,7 +477,7 @@ class ArtificialSelector(object):
         logging.info('New length of next gen: {}.'.format(len(self.next_gen)))
         logging.info('New length of bourgeoisie: {}.'.format(len(self.next_gen.bourgeoisie)))
 
-        self.generations.append(self.next_gen)
+        self.generations.append(copy(self.next_gen))
         self.next_gen = None
         assert self.generations[-1] is not None
         logging.info('Added current generation {} to generation list.'
@@ -487,7 +486,7 @@ class ArtificialSelector(object):
             remove('{}-gencurrent.json'.format(self.run_hash))
         self.generations[-1].dump(len(self.generations)-1)
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
-        display_gen(self.generations[-1])
+        print(self.generations[-1])
 
     def scrape_result(self, result, proc, newborns):
         """ Check process for result and scrape into self.next_gen. """
@@ -564,7 +563,7 @@ class ArtificialSelector(object):
             print_exc()
             logging.error('Something went wrong when reloading run {}'.format(self.run_hash))
             exit('Something went wrong when reloading run {}'.format(self.run_hash))
-        assert len(self.generations) > 1
+        assert len(self.generations) > 0
         for i in range(len(self.generations)):
             if not self.testing:
                 removed = self.generations[i].clean()
@@ -592,6 +591,7 @@ class ArtificialSelector(object):
             logging.info('Successfully loaded {} structures into current generation ({}) from run {}.'.format(len(self.next_gen),
                                                                                                               len(self.generations),
                                                                                                               self.run_hash))
+            assert len(self.next_gen) >= 1
 
         return
 
@@ -620,7 +620,7 @@ class ArtificialSelector(object):
                     del self.gene_pool[ind]['_id']
                 self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
                 fitness = 1 - np.tanh(2 * self.gene_pool[ind]['raw_fitness'])
-                fitness = max(fitness, 1)
+                fitness = min(fitness, 1)
                 self.gene_pool[ind]['fitness'] = fitness
 
         # check gene pool is sensible
