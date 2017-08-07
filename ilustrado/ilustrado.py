@@ -5,7 +5,7 @@ from .generation import Generation
 from .fitness import FitnessCalculator
 from .util import strip_useless
 from pkg_resources import require
-__version__ = require('matador')[0].version
+__version__ = require('ilustrado')[0].version
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
@@ -639,7 +639,7 @@ class ArtificialSelector(object):
                                            fitness_calculator=None,
                                            populace=self.gene_pool))
 
-        self.generations[-1].set_bourgeoisie()
+        self.generations[-1].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
 
         logging.info('Successfully initialised generation 0 with {} members'
                      .format(len(self.generations[-1])))
