@@ -175,7 +175,6 @@ class Generation():
             # stoichiometry in exchange for the least fit structure already included
             for stoich in best_from_stoichs:
                 if best_from_stoichs[stoich] not in self.bourgeoisie:
-                    self.bourgeoisie.pop()
                     self.bourgeoisie.insert(0, best_from_stoichs[stoich])
 
         if elites is not None:

@@ -28,15 +28,13 @@ def fitness_swarm_plot(generations, ax=None, save=False):
 
 def plot_new_2d_hull(generations, hull):
     """ Add new structures to old ConvexHull plot. """
-    import matplotlib
-    matplotlib.use('Agg')
     import numpy as np
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111)
     hull.set_plot_param()
-    ax = hull.plot_2d_hull(show=False, ax=ax)
-    mutant_colours = plt.cm.Reds_r(np.linspace(0, 0.5, len(generations)))
-    crossover_colours = plt.cm.Blues_r(np.linspace(0, 0.5, len(generations)))
+    ax = hull.plot_2d_hull(show=False, ax=ax, plot_points=False)
+    mutant_colours = plt.cm.PRGn(np.linspace(0, 0.3, len(generations)))
+    crossover_colours = plt.cm.PRGn_r(np.linspace(0, 0.3, len(generations)))
     for idx, generation in enumerate(generations[1:]):
         for structure in generation.populace:
             if 'mutations' not in structure:
@@ -45,4 +43,10 @@ def plot_new_2d_hull(generations, hull):
                 colour = mutant_colours[idx] if 'crossover' not in structure['mutations'] else crossover_colours[idx]
             ax.scatter(structure['concentration'][0], structure['formation_enthalpy_per_atom'],
                        c=colour, s=35, zorder=1000, lw=0)
+    colours = [mutant_colours[0], mutant_colours[-1], crossover_colours[0], crossover_colours[-1]]
+    labels = ['mutant gen 0', 'mutant final gen', 'crossover gen 0', 'crossover final gen']
+    for ind, colour in enumerate(colours):
+        ax.scatter(-0.5, 10,
+                   c=colour, s=35, zorder=1000, lw=0, label=labels[ind])
+    ax.legend(loc=9, frameon=True)
     plt.savefig(generations[0].run_hash + '_hullplot.pdf')

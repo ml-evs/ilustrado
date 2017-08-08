@@ -39,22 +39,9 @@ class FitnessCalculator(object):
         else:
             raise RuntimeError('No recognised fitness metric given.')
         if fitness_function is None:
-            self.fitness_function = self._default_fitness_function
+            self.fitness_function = default_fitness_function
         else:
             self.fitness_function = fitness_function
-
-    def _default_fitness_function(self, raw):
-        """ Default fitness function: logistic function.
-
-        Input:
-
-            | raw: ndarray, array of raw fitness values.
-        """
-        c = 100
-        offset = 0.05
-        fitnesses = 1 / (1 + np.exp(c*(raw - offset)))
-        fitnesses[fitnesses > 1.0] = 1.0
-        return fitnesses
 
     def evaluate(self, generation):
         """ Assign normalised fitnesses to an entire generation.
@@ -122,3 +109,20 @@ class FitnessCalculator(object):
 
         """
         return (0.05 * np.random.rand(len(generation)) - 0.01).tolist()
+
+
+def default_fitness_function(raw):
+    """ Default fitness function: logistic function.
+
+    Input:
+
+        | raw: ndarray, array of raw fitness values.
+    """
+    c = 100
+    offset = 0.05
+    fitnesses = 1 / (1 + np.exp(c*(raw - offset)))
+    if isinstance(fitnesses, np.float64):
+        fitnesses = min(1, fitnesses)
+    else:
+        fitnesses[fitnesses > 1.0] = 1.0
+    return fitnesses

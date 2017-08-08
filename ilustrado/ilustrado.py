@@ -603,6 +603,7 @@ class ArtificialSelector(object):
             gene_pool: list(dict), list of structure with which to seed generation.
 
         """
+        from ilustrado.fitness import default_fitness_function
         # if gene_pool is None, try to read from res files in cwd
         if gene_pool is None:
             res_list = []
@@ -619,8 +620,7 @@ class ArtificialSelector(object):
                 if '_id' in parent:
                     del self.gene_pool[ind]['_id']
                 self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
-                fitness = 1 - np.tanh(2 * self.gene_pool[ind]['raw_fitness'])
-                fitness = min(fitness, 1)
+                fitness = default_fitness_function(self.gene_pool[ind]['raw_fitness'])
                 self.gene_pool[ind]['fitness'] = fitness
 
         # check gene pool is sensible
@@ -639,7 +639,7 @@ class ArtificialSelector(object):
                                            fitness_calculator=None,
                                            populace=self.gene_pool))
 
-        self.generations[-1].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
+        self.generations[-1].set_bourgeoisie(best_from_stoich=False)
 
         logging.info('Successfully initialised generation 0 with {} members'
                      .format(len(self.generations[-1])))
