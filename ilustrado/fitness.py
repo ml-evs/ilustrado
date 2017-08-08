@@ -11,11 +11,12 @@ class FitnessCalculator(object):
 
     Input:
 
-        | fitness_metric: str, either 'dummy', 'hull' or 'hull_test'.
-        | hull          : QueryConvexHull, matador hull from which to calculate metastability,
+        | fitness_metric   : str, either 'dummy', 'hull' or 'hull_test'.
+        | fitness_function : fn, function to operate on numpy array of raw fitness values,
+        | hull             : QueryConvexHull, matador hull from which to calculate metastability,
 
     """
-    def __init__(self, fitness_metric='dummy', hull=None, debug=False):
+    def __init__(self, fitness_metric='dummy', fitness_function=None, hull=None, debug=False):
         """ Initialise fitness calculator, if from hull then
         extract chemical potentials.
         """
@@ -37,6 +38,23 @@ class FitnessCalculator(object):
             self.chempots = hull.match
         else:
             raise RuntimeError('No recognised fitness metric given.')
+        if fitness_function is None:
+            self.fitness_function = self._default_fitness_function
+        else:
+            self.fitness_function = fitness_function
+
+    def _default_fitness_function(self, raw):
+        """ Default fitness function: logistic function.
+
+        Input:
+
+            | raw: ndarray, array of raw fitness values.
+        """
+        c = 100
+        offset = 0.05
+        fitnesses = 1 / (1 + np.exp(c*(raw - offset)))
+        fitnesses[fitnesses > 1.0] = 1.0
+        return fitnesses
 
     def evaluate(self, generation):
         """ Assign normalised fitnesses to an entire generation.
@@ -52,8 +70,7 @@ class FitnessCalculator(object):
         """
 
         raw = self._get_raw(generation)
-        fitnesses = 1 - np.tanh(2*raw)
-        fitnesses[fitnesses > 1.0] = 1.0
+        fitnesses = self.fitness_function(raw)
 
         for ind, populum in enumerate(generation):
             generation[ind]['fitness'] = fitnesses[ind]
