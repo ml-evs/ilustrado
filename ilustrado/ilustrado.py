@@ -619,7 +619,11 @@ class ArtificialSelector(object):
             for ind, parent in enumerate(self.gene_pool):
                 if '_id' in parent:
                     del self.gene_pool[ind]['_id']
-                self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
+                if 'hull_distance' in self.gene_pool[ind]:
+                    self.gene_pool[ind]['raw_fitness'] = self.gene_pool[ind]['hull_distance']
+                else:
+                    self.gene_pool[ind]['hull_distance'] = self.fitness_calculator.evaluate([self.gene_pool[ind]])
+
                 fitness = default_fitness_function(self.gene_pool[ind]['raw_fitness'])
                 self.gene_pool[ind]['fitness'] = fitness
 
