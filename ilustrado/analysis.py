@@ -37,7 +37,7 @@ def plot_new_2d_hull(generations, hull):
     crossover_colours = plt.cm.PRGn_r(np.linspace(0, 0.3, len(generations)))
     for structure in generations[0].populace:
         ax.scatter(structure['concentration'][0], structure['formation_enthalpy_per_atom'],
-                   c='r', s=50, zorder=10000, lw=1, edgecolors='k')
+                   c='r', s=50, zorder=100000000, lw=2, edgecolors='k')
     for idx, generation in enumerate(generations[1:]):
         for structure in generation.populace:
             if 'mutations' not in structure:
@@ -50,7 +50,7 @@ def plot_new_2d_hull(generations, hull):
     labels = ['initial populace', 'mutant gen 1', 'mutant final gen', 'crossover gen 1', 'crossover final gen']
     for ind, colour in enumerate(colours):
         if ind == 0:
-            ax.scatter(-0.5, 10, c=colour, s=50, zorder=1000, lw=1, edgecolors='k', label=labels[ind])
+            ax.scatter(-0.5, 10, c=colour, s=50, zorder=1000, lw=2, edgecolors='k', label=labels[ind])
         else:
             ax.scatter(-0.5, 10, c=colour, s=35, zorder=1000, lw=0, label=labels[ind])
     ax.legend(loc=9, frameon=True)
