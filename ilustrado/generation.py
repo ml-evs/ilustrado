@@ -102,6 +102,17 @@ class Generation():
         with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
             json.dump(self.populace, f, sort_keys=False, indent=2)
 
+    def dump_bourgeoisie(self, gen_suffix):
+        """ Dump the current generation's bourgeoisie to JSON file.
+
+        Input:
+
+            | gen_suffix: str, typically gen<gen_number>.
+
+        """
+        with open('{}-gen{}-bourgeoisie.json'.format(self.run_hash, gen_suffix), 'w') as f:
+            json.dump(self.bourgeoisie, f, sort_keys=False, indent=2)
+
     def load(self, gen_fname):
         """ Load populace of the generation from a JSON dump.
 
@@ -112,6 +123,17 @@ class Generation():
         """
         with open(gen_fname, mode='r') as f:
             self.populace = json.load(f)
+
+    def load_bourgeoisie(self, bourge_fname):
+        """ Load bourgeoisie of the generation from a JSON dump.
+
+        Input:
+
+            | bourge_fname: str, filename to load.
+
+        """
+        with open(bourge_fname, mode='r') as f:
+            self.bourgeoisie = json.load(f)
 
     def birth(self, populum):
         """ Add a structure to the populace.
