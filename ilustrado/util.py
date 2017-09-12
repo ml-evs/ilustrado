@@ -23,6 +23,10 @@ class FakeFullRelaxer(object):
         self.structure = res
 
     def relax(self, output_queue=None):
+        fake_number_crunch = True
+        if fake_number_crunch:
+            array = np.random.rand(100, 100)
+            np.linalg.eig(array)
         self.structure['enthalpy_per_atom'] = np.random.rand()
         sleep(np.random.rand())
         if np.random.rand() < 0.8:
