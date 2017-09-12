@@ -9,7 +9,7 @@ __version__ = require('ilustrado')[0].version
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
-from matador.export import generate_hash, doc2res, doc2param
+from matador.export import generate_hash, doc2res
 from matador.similarity.similarity import get_uniq_cursor
 from matador.utils.chem_utils import get_formula_from_stoich
 from matador.hull import QueryConvexHull
@@ -300,21 +300,27 @@ class ArtificialSelector(object):
             while attempts < self.max_attempts and not finished:
                 # if we've reached the target popn, try to kill remaining processes nicely
                 if len(self.next_gen) >= self.population:
-                    for proc in procs:
-                        try:
-                            # adjust param file to do just one more iteration
-                            params, s = param2dict('{}.param'.format(newborns[proc[0]]['source']), db=False)
-                            params['geom_max_iter'] = 1
-                            doc2param(params, '{}.param'.format(newborns[proc[0]]['source']), overwrite=True)
-                        except:
-                            logging.warning('Exception caught:', exc_info=True)
-                        # create kill file so that matador will stop next finished CASTEP
-                        with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
-                            pass
-                        proc[2].join(timeout=3600)
-                        if isfile('{}.kill'.format(newborns[proc[0]]['source'][0])):
-                            remove('{}.kill'.format(newborns[proc[0]]['source'][0]))
                     finished = True
+                    # while there are still processes running, try to kill them with kill files
+                    # that should end the job at the completion of the next CASTEP run
+                    kill_attempts = 0
+                    while len(procs) > 0 and kill_attempts < 5:
+                        for ind, proc in enumerate(procs):
+                            # create kill file so that matador will stop next finished CASTEP
+                            with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
+                                pass
+                            # wait 1 minute for CASTEP run
+                            if proc[2].join(timeout=60) is not None:
+                                result = queues[ind].get(timeout=60)
+                                if isinstance(result, dict):
+                                    self.scrape_result(result, proc, newborns)
+                                del procs[ind]
+                            kill_attempts += 1
+                    if kill_attempts >= 5:
+                        for ind, proc in enumerate(procs):
+                            proc[2].terminate()
+                            del procs[ind]
+
                 # are we using all nodes? if not, start some processes
                 elif len(procs) < self.nprocs and len(self.next_gen) < self.population:
                     possible_parents = (self.generations[-1].populace
@@ -364,6 +370,7 @@ class ArtificialSelector(object):
                     procs[-1][2].start()
                     logging.info('Initialised relaxation for newborn {} on node {} with {} cores.'
                                  .format(', '.join(newborns[-1]['source']), node, ncores))
+
                 # are we using all nodes? if so, are they all still running?
                 elif len(procs) == self.nprocs and all([proc[2].is_alive() for proc in procs]):
                     # poll processes every 10 seconds
@@ -404,7 +411,7 @@ class ArtificialSelector(object):
 
                                 logging.warning('Process {} on node {} terminated forcefully.'
                                                 .format(proc[0], proc[1]))
-                            # if the node didn't return a result, then don't use again
+                            # if monitor is True and the node didn't return a result, then don't use again
                             if not self.monitor or result is not False:
                                 free_nodes.append(proc[1])
                                 free_cores.append(proc[3])
@@ -423,14 +430,7 @@ class ArtificialSelector(object):
             print_exc()
             # clean up on error/interrupt
             if len(procs) > 1:
-                for proc in procs:
-                    if self.nodes is None:
-                        with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
-                            pass
-                    else:
-                        sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
-                               stdout=sp.DEVNULL, shell=False)
-                        proc[2].terminate()
+                self.kill_all(procs)
             raise SystemExit
 
         logging.info('No longer breeding structures in this generation.')
@@ -438,13 +438,7 @@ class ArtificialSelector(object):
         if len(procs) > 1:
             logging.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
             for proc in procs:
-                if self.nodes is None:
-                    with open('{}.kill'.format(newborns[proc[0]]['source'][0]), 'w'):
-                        pass
-                else:
-                    sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
-                           stdout=sp.DEVNULL, shell=False)
-                    proc[2].terminate()
+                self.kill_all(procs)
 
         if attempts >= self.max_attempts:
             logging.warning('Failed to return enough successful structures to continue...')
@@ -463,7 +457,12 @@ class ArtificialSelector(object):
 
         # add random elite structures from previous gen
         if self.num_elite <= len(self.generations[-1].bourgeoisie):
-            elites = deepcopy(np.random.choice(self.generations[-1].bourgeoisie, self.num_elite, replace=False))
+            probabilities = np.asarray([doc['fitness'] for doc in self.generations[-1].bourgeoisie])+0.0001
+            probabilities /= np.sum(probabilities)
+            elites = deepcopy(np.random.choice(self.generations[-1].bourgeoisie,
+                                               self.num_elite,
+                                               replace=False,
+                                               p=probabilities))
         else:
             elites = deepcopy(self.generations[-1].bourgeoisie)
             if self.debug:
@@ -485,11 +484,21 @@ class ArtificialSelector(object):
         if isfile('{}-gencurrent.json'.format(self.run_hash)):
             remove('{}-gencurrent.json'.format(self.run_hash))
         self.generations[-1].dump(len(self.generations)-1)
+        self.generations[-1].dump_bourgeoisie(len(self.generations)-1)
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
         print(self.generations[-1])
 
     def scrape_result(self, result, proc, newborns):
-        """ Check process for result and scrape into self.next_gen. """
+        """ Check process for result and scrape into self.next_gen if successful,
+        with duplicate detection if desired.
+
+        Input:
+
+            | result   : dict, containing output from process,
+            | proc     : tuple, standard process tuple from above,
+            | newborns : list, of new structures to append result to.
+
+        """
         if self.debug:
             print(proc)
             print(dumps(result, sort_keys=True))
@@ -533,6 +542,20 @@ class ArtificialSelector(object):
                       status,
                       ', '.join(newborns[proc[0]]['mutations'])))
 
+    def kill_all(self, procs):
+        """ Loop over processes and kill them all.
+
+        Input:
+
+            | procs: list(tuple), list of processes in form documented above.
+
+        """
+        for proc in procs:
+            if self.nodes is not None:
+                sp.run(['ssh', proc[1], 'pkill {}'.format(self.executable)], timeout=15,
+                       stdout=sp.DEVNULL, shell=False)
+            proc[2].terminate()
+
     def recover(self):
         """ Attempt to recover previous generations from files in cwd
         named '<run_hash>_gen{}.json'.format(gen_idx).
@@ -570,12 +593,22 @@ class ArtificialSelector(object):
                 logging.info('Removed {} structures from generation {}'.format(removed, i))
             if i == len(self.generations)-1 and len(self.generations) > 1:
                 if self.num_elite <= len(self.generations[-2].bourgeoisie):
-                    elites = deepcopy(np.random.choice(self.generations[-2].bourgeoisie, self.num_elite, replace=False))
+                    # generate elites with probability proportional to their fitness, but ensure every p is non-zero
+                    probabilities = np.asarray([doc['fitness'] for doc in self.generations[-2].bourgeoisie])+0.0001
+                    probabilities /= np.sum(probabilities)
+                    elites = deepcopy(np.random.choice(self.generations[-2].bourgeoisie,
+                                                       self.num_elite,
+                                                       replace=False,
+                                                       p=probabilities))
                 else:
                     elites = deepcopy(self.generations[-2].bourgeoisie)
                 self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich, elites=elites)
             else:
-                self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
+                bourge_fname = '{}-gen{}-bourgeoisie.json'.format(self.run_hash, i)
+                if isfile(bourge_fname):
+                    self.generations[i].load_bourgeoisie(bourge_fname)
+                else:
+                    self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
             logging.info('Bourgeoisie contains {} structures: generation {}'.format(len(self.generations[i].bourgeoisie), i))
             assert len(self.generations[i]) >= 1
             assert len(self.generations[i].bourgeoisie) >= 1
@@ -648,6 +681,7 @@ class ArtificialSelector(object):
         logging.info('Successfully initialised generation 0 with {} members'
                      .format(len(self.generations[-1])))
         self.generations[0].dump(0)
+        self.generations[0].dump_bourgeoisie(0)
 
         print(self.generations[-1])
         return
