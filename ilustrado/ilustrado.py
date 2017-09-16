@@ -335,6 +335,7 @@ class ArtificialSelector(object):
                                     mutations=self.mutations,
                                     max_num_mutations=self.max_num_mutations,
                                     max_num_atoms=self.max_num_atoms,
+                                    structure_filter=self.structure_filter,
                                     debug=self.debug)
                     newborn_id = len(newborns)
                     newborn_source_id = len(self.next_gen)
