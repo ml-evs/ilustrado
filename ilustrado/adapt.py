@@ -11,7 +11,7 @@ import logging
 
 
 def adapt(possible_parents, mutation_rate, crossover_rate,
-          mutations=None, max_num_mutations=3, max_num_atoms=40, debug=False):
+          mutations=None, max_num_mutations=3, max_num_atoms=40, structure_filter=None, debug=False):
     """ Take a list of possible parents and randomly adapt
     according to given mutation weightings.
 
@@ -19,10 +19,14 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
 
         | possible_parents  : list(dict), list of all breeding stock,
         | mutation_rate     : float, rate of mutations relative to crossover,
-        | crossover_rate    : float, see above,
+        | crossover_rate    : float, see above.
+
+    Args:
+
         | mutations         : list(str), list of desired mutations to choose from (as strings),
         | max_num_mutations : int, rand(1, this) mutations will be performed,
         | max_num_atoms     : int, any structures with more than this many atoms will be filtered out.
+        | structure_filter  : fn(doc), custom filter to pass to check_feasible.
 
     Returns:
 
@@ -74,7 +78,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                                  max_num_mutations=max_num_mutations,
                                  debug=debug)
                 parents = [parent]
-                valid_cell = check_feasible(newborn, parents, max_num_atoms)
+                valid_cell = check_feasible(newborn, parents, max_num_atoms, structure_filter=structure_filter)
             except Exception as oops:
                 if debug:
                     print_exc()
@@ -85,7 +89,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
             parents = np.random.choice(possible_parents, size=2, replace=False)
             try:
                 newborn = crossover(parents, debug=debug)
-                valid_cell = check_feasible(newborn, parents, max_num_atoms)
+                valid_cell = check_feasible(newborn, parents, max_num_atoms, structure_filter=structure_filter)
             except Exception as oops:
                 if debug:
                     print_exc()
@@ -110,7 +114,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     return newborn
 
 
-def check_feasible(mutant, parents, max_num_atoms, debug=False):
+def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, debug=False):
     """ Check if a mutated/newly-born cell is "feasible".
 
     Here, feasible means:
@@ -119,7 +123,8 @@ def check_feasible(mutant, parents, max_num_atoms, debug=False):
         * no overlapping atoms,
         * cell angles between 50 and 130 degrees,
         * fewer than max_num_atoms in the cell,
-        * ensure number of atomic types is maintained.
+        * ensure number of atomic types is maintained,
+        * any custom filter is obeyed.
 
     Input:
 
@@ -127,12 +132,23 @@ def check_feasible(mutant, parents, max_num_atoms, debug=False):
         | parents       : list(dict), list of doc(s) containing parent structures.
         | max_num_atoms : int, any structures with more than this many atoms will be filtered out.
 
+    Args:
+
+        | structure_filter : fn, any function that takes a matador document and returns True or False.
+
     Returns:
 
         | feasibility : bool, determined by points above.
 
     """
-    # check number of atoms first
+    # first check the structure filter
+    if structure_filter is not None and not structure_filter(mutant):
+        message = 'Mutant with {} failed to pass the custom filter.'.format(', '.join(mutant['mutations']))
+        logging.debug(message)
+        if debug:
+            print(message)
+        return False
+    # check number of atoms
     if 'num_atoms' not in mutant or 'num_atoms' != len(mutant['atom_types']):
         mutant['num_atoms'] = len(mutant['atom_types'])
     if mutant['num_atoms'] > max_num_atoms:
@@ -141,7 +157,7 @@ def check_feasible(mutant, parents, max_num_atoms, debug=False):
         if debug:
             print(message)
         return False
-    # check number density first
+    # check number density
     if 'cell_volume' not in mutant:
         mutant['cell_volume'] = cart2volume(mutant['lattice_cart'])
     number_density = mutant['num_atoms'] / mutant['cell_volume']

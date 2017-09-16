@@ -48,7 +48,8 @@ class ArtificialSelector(object):
         | population        : int, number of structures to breed in any given generation,
         | elitism           : float, fraction of next generation to be comprised of elite structures from previous generation,
         | best_from_stoich  : bool, whether to always include the best structure from a stoichiomtery in the next generation,
-        | mutations         : list(str) list of mutation names to use,
+        | mutations         : list(str), list of mutation names to use,
+        | structure_filter  : fn(doc), any function that takes a matador doc and returns True or False,
         | check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check unrelaxed mutant) [NOT YET IMPLEMENTED]
         | max_num_mutations : int, maximum number of mutations to perform on a single structure,
         | max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
@@ -79,6 +80,7 @@ class ArtificialSelector(object):
                  elitism=0.2,
                  best_from_stoich=True,
                  mutations=None,
+                 structure_filter=None,
                  check_dupes=1,
                  max_num_mutations=3,
                  max_num_atoms=40,
@@ -138,6 +140,7 @@ class ArtificialSelector(object):
         assert isinstance(self.max_num_mutations, int)
         self.max_num_atoms = max_num_atoms
         assert isinstance(self.max_num_atoms, int)
+        self.structure_filter = structure_filter
         self.check_dupes = int(check_dupes)
         assert self.check_dupes in [0, 1, 2]
         if self.check_dupes == 2:
