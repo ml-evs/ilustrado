@@ -11,6 +11,7 @@ from matador.scrapers.castep_scrapers import res2dict, cell2dict, param2dict
 from matador.compute import FullRelaxer
 from matador.export import generate_hash, doc2res
 from matador.similarity.similarity import get_uniq_cursor
+from matador.similarity.pdf_similarity import PDF
 from matador.utils.chem_utils import get_formula_from_stoich
 from matador.hull import QueryConvexHull
 # external libraries
@@ -51,6 +52,7 @@ class ArtificialSelector(object):
         | mutations         : list(str), list of mutation names to use,
         | structure_filter  : fn(doc), any function that takes a matador doc and returns True or False,
         | check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check unrelaxed mutant) [NOT YET IMPLEMENTED]
+        | check_dupes_hull  : bool, compare pdf with all hull structures,
         | max_num_mutations : int, maximum number of mutations to perform on a single structure,
         | max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
         | monitor           : bool, whether or not to restart nodes that fail unexpectedly,
@@ -82,6 +84,7 @@ class ArtificialSelector(object):
                  mutations=None,
                  structure_filter=None,
                  check_dupes=1,
+                 check_dupes_hull=False,
                  max_num_mutations=3,
                  max_num_atoms=40,
                  monitor=False,
@@ -142,6 +145,17 @@ class ArtificialSelector(object):
         assert isinstance(self.max_num_atoms, int)
         self.structure_filter = structure_filter
         self.check_dupes = int(check_dupes)
+        self.check_dupes_hull = check_dupes_hull
+        # if we're checking hull pdfs too, make this list now
+        if self.check_dupes_hull:
+            print('Computing extra PDFs from hull...')
+            import progressbar
+            bar = progressbar.ProgressBar(term_width=80)
+            self.extra_pdfs = []
+            for doc in bar(hull.query.cursor):
+                self.extra_pdfs.append(PDF(doc, projected=True))
+        else:
+            self.extra_pdfs = None
         assert self.check_dupes in [0, 1, 2]
         if self.check_dupes == 2:
             raise NotImplementedError
@@ -358,13 +372,13 @@ class ArtificialSelector(object):
                                                   res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
                                                   debug=False, verbosity=self.verbosity,
                                                   reopt=False, executable=self.executable,
-                                                  start=False, redirect=False)
+                                                  start=False)
                     else:
                         relaxer = FullRelaxer(ncores=ncores, nnodes=None, node=node,
                                               res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
                                               debug=False, verbosity=self.verbosity, killcheck=True,
                                               reopt=False, executable=self.executable,
-                                              start=False, redirect=False, **self.relaxer_params)
+                                              start=False, **self.relaxer_params)
                     queues.append(mp.Queue())
                     # store proc object with structure ID, node name, output queue and number of cores
                     procs.append((newborn_id, node,
@@ -518,7 +532,7 @@ class ArtificialSelector(object):
                 result['mutations'] = newborns[proc[0]]['mutations']
 
             result = strip_useless(result)
-            dupe = self.is_newborn_dupe(result)
+            dupe = self.is_newborn_dupe(result, extra_pdfs=self.extra_pdfs)
             if dupe and self.check_dupes in [1, 2]:
                 status = 'Duplicate'
                 logging.debug('Newborn {} is a duplicate and will not be included.'
@@ -593,8 +607,9 @@ class ArtificialSelector(object):
         assert len(self.generations) > 0
         for i in range(len(self.generations)):
             if not self.testing:
-                removed = self.generations[i].clean()
-                logging.info('Removed {} structures from generation {}'.format(removed, i))
+                if i != 0:
+                    removed = self.generations[i].clean()
+                    logging.info('Removed {} structures from generation {}'.format(removed, i))
             if i == len(self.generations)-1 and len(self.generations) > 1:
                 if self.num_elite <= len(self.generations[-2].bourgeoisie):
                     # generate elites with probability proportional to their fitness, but ensure every p is non-zero
@@ -690,7 +705,7 @@ class ArtificialSelector(object):
         print(self.generations[-1])
         return
 
-    def is_newborn_dupe(self, newborn):
+    def is_newborn_dupe(self, newborn, extra_pdfs=None):
         """ Check each generation for a duplicate structure to the current newborn,
         using PDF calculator from matador.
 
@@ -698,11 +713,23 @@ class ArtificialSelector(object):
 
             | newborn: dict, new structure to screen against the existing,
 
+        Args:
+
+            | extra_pdfs: list(PDF), any extra PDFs to compare to, e.g. other hull structures
+                          not used to seed any generation
+
         Returns:
 
             | True if duplicate, else False.
         """
-        return any([gen.is_dupe(newborn) for gen in self.generations])
+        for ind, gen in enumerate(self.generations):
+            if ind == 0:
+                if gen.is_dupe(newborn, extra_pdfs=extra_pdfs):
+                    return True
+            else:
+                if gen.is_dupe(newborn):
+                    return True
+        return False
 
     def finalise_files_for_export(self):
         """ Move unique structures from gen1 onwards to folder "<run_hash>-results". """

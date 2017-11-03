@@ -210,20 +210,31 @@ class Generation():
             self._pdfs.append(PDF(structure, projected=True))
             self._stoichs.append(sorted(structure['stoichiometry']))
 
-    def is_dupe(self, doc):
+    def is_dupe(self, doc, sim_tol=5e-2, extra_pdfs=None):
         """ Compare doc with all other structures at same stoichiometry via PDF overlap.
 
         Input:
 
             | doc: dict, structure to compare.
 
+        Args:
+
+            | sim_tol   : float, similarity tolerance to compare to
+            | extra_pdfs: list(PDF), list of extra pdfs to compare against
+
         """
         new_pdf = PDF(doc, projected=True)
         for ind, pdf in enumerate(self.pdfs):
             if sorted(doc['stoichiometry']) == self._stoichs[ind]:
                 dist = new_pdf.get_sim_distance(pdf, projected=True)
-                if dist < 5e-2:
+                if dist < sim_tol:
                     return True
+        if extra_pdfs is not None:
+            for ind, pdf in enumerate(extra_pdfs):
+                if sorted(doc['stoichiometry']) == sorted(pdf.doc['stoichiometry']):
+                    dist = new_pdf.get_sim_distance(pdf, projected=pdf.projected)
+                    if dist < sim_tol:
+                        return True
         return False
 
     @property
