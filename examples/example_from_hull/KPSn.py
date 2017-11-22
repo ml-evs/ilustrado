@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+""" This example runs directly from a matador DBQuery. """
 from matador.query import DBQuery
 from matador.hull import QueryConvexHull
 from matador.similarity.similarity import get_uniq_cursor
