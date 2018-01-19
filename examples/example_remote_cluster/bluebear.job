@@ -1,0 +1,18 @@
+#!/bin/bash -l
+#SBATCH --ntasks 200
+#SBATCH --nodes 10-10
+#SBATCH --time 10:00:00
+#SBATCH --qos bbdefault 
+#SBATCH --mail-type ALL
+#SBATCH --account=morriajz-energy-materials
+
+module purge
+module load bluebear
+module load mpi/impi/2017.1.132-iccifort-2017.1.132
+# required for srun to place nice with Intel MPI
+export I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+source $HOME/.bashrc
+# or whatever venv you've installed to
+source activate matador
+python KSnP.py 10 > ilustrado.out 2> ilustrado.err
+exit

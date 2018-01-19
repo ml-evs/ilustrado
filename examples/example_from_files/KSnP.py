@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+#/usr/bin/env python
+""" This example starts an ilustrado run from phases found in the seed folder.
+It will run on a local cluster on the 3 named nodes and core counts.
+"""
 from matador.hull import QueryConvexHull
 from matador.similarity.similarity import get_uniq_cursor
 from matador.utils.chem_utils import get_formula_from_stoich
