@@ -111,15 +111,13 @@ class FitnessCalculator(object):
         return (0.05 * np.random.rand(len(generation)) - 0.01).tolist()
 
 
-def default_fitness_function(raw):
+def default_fitness_function(raw, c=100, offset=0.1):
     """ Default fitness function: logistic function.
 
     Input:
 
         | raw: ndarray, array of raw fitness values.
     """
-    c = 100
-    offset = 0.05
     fitnesses = 1 / (1 + np.exp(c*(raw - offset)))
     if isinstance(fitnesses, np.float64):
         fitnesses = min(1, fitnesses)
