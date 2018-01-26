@@ -17,7 +17,7 @@ class MutationTest(unittest.TestCase):
     """ Tests basic crossover functionality. """
     def testVoronoi(self):
         chdir(REAL_PATH)
-        with open('jdkay7-gen1.json') as f:
+        with open('data/jdkay7-gen1.json') as f:
             generation = load(f)
         print([get_formula_from_stoich(doc['stoichiometry']) for doc in generation])
         _iter = 0
