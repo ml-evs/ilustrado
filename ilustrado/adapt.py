@@ -2,6 +2,7 @@
 """ This file contains a wrapper for mutation and crossover. """
 from .mutate import mutate
 from .crossover import crossover
+from .util import strip_useless
 from matador.utils.cell_utils import cart2volume, frac2cart, cart2abc
 from scipy.spatial.distance import cdist
 from itertools import product
@@ -71,7 +72,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     while not valid_cell and num_iter < max_restarts:
         # if random number is less than mutant rate, then mutate
         if mutation_rand_seed < mutation_rate:
-            parent = np.random.choice(possible_parents)
+            parent = strip_useless(np.random.choice(possible_parents))
             try:
                 newborn = mutate(parent,
                                  mutations=_mutations,
@@ -86,7 +87,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                 valid_cell = False
         # otherwise, do crossover
         else:
-            parents = np.random.choice(possible_parents, size=2, replace=False)
+            parents = [strip_useless(parent) for parent in np.random.choice(possible_parents, size=2, replace=False)]
             try:
                 newborn = crossover(parents, debug=debug)
                 valid_cell = check_feasible(newborn, parents, max_num_atoms, structure_filter=structure_filter)
