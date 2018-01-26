@@ -1,0 +1,15 @@
+#!/bin/bash
+#SBATCH -J GA_NaSnP
+#SBATCH -A T2-CS006-CPU
+#SBATCH --nodes=1
+#SBATCH --ntasks=32
+#SBATCH --time=24:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --no-requeue
+#SBATCH -p skylake
+
+source $HOME/.bashrc
+source activate matador
+export PYTHONPATH="$PYTHONPATH:$HOME/src/ajm_group_voronoi_code"
+
+python KSnP.py >> ilustrado.out 2>> ilustrado.err
