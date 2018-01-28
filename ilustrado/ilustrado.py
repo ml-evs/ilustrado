@@ -373,6 +373,8 @@ class ArtificialSelector(object):
         import matador.slurm
         logging.info('Preparing to submit slurm scripts...')
         slurm_fname = '{}_relax.job'.format(self.run_hash)
+        # override jobname with this run's hash to allow for selective job killing
+        slurm_dict['SLURM_JOB_NAME'] = self.run_hash
         compute_string = 'run3 {}'.format(self.seed)
         matador.slurm.write_slurm_submission_script(slurm_fname,
                                                     slurm_dict,
@@ -392,11 +394,17 @@ class ArtificialSelector(object):
                                                     self.walltime_hrs,
                                                     template=self.slurm_template,
                                                     num_nodes=1)
-        # submit jobs
-        array_job_id = matador.slurm.submit_slurm_script(slurm_fname, num_array_tasks=self.max_num_nodes)
-        logging.info('Submitted job array: {}'.format(array_job_id))
-        monitor_job_id = matador.slurm.submit_slurm_script(slurm_fname, depend_on_job=array_job_id)
-        logging.info('Submitted monitor job: {}'.format(monitor_job_id))
+        # submit jobs, if any exceptions, cancel all jobs
+        try:
+            array_job_id = matador.slurm.submit_slurm_script(slurm_fname, num_array_tasks=self.max_num_nodes)
+            logging.info('Submitted job array: {}'.format(array_job_id))
+            monitor_job_id = matador.slurm.submit_slurm_script(slurm_fname, depend_on_job=array_job_id)
+            logging.info('Submitted monitor job: {}'.format(monitor_job_id))
+        except:
+            logging.error('Something went wrong, trying to cancel all jobs.')
+            output = matador.slurm.scancel_all_matching_jobs(name=self.run_hash)
+            logging.error('scancel output: {}'.format(output))
+            exit('Something went wrong, please check the log file.')
 
     def continuous_birth(self):
         """ Create new generation and relax "as they come", filling the compute
