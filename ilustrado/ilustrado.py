@@ -380,11 +380,11 @@ class ArtificialSelector(object):
         # prepare script to relax this generation
         import matador.slurm
         logging.info('Preparing to submit slurm scripts...')
-        slurm_fname = '{}_relax.job'.format(self.run_hash)
+        relax_fname = '{}_relax.job'.format(self.run_hash)
         # override jobname with this run's hash to allow for selective job killing
         slurm_dict['SLURM_JOB_NAME'] = self.run_hash
         compute_string = 'run3 {}'.format(self.seed)
-        matador.slurm.write_slurm_submission_script(slurm_fname,
+        matador.slurm.write_slurm_submission_script(relax_fname,
                                                     slurm_dict,
                                                     compute_string,
                                                     self.walltime_hrs,
@@ -395,8 +395,9 @@ class ArtificialSelector(object):
             logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
 
         # prepare script to read in results
-        compute_string = 'python {}'.format(self.entrypoint)
-        matador.slurm.write_slurm_submission_script(slurm_fname,
+        monitor_fname = '{}_monitor.job'.format(self.run_hash)
+        compute_string = 'python {} >> ilustrado.out 2>> ilustrado.err'.format(self.entrypoint)
+        matador.slurm.write_slurm_submission_script(monitor_fname,
                                                     slurm_dict,
                                                     compute_string,
                                                     self.walltime_hrs,
@@ -404,9 +405,9 @@ class ArtificialSelector(object):
                                                     num_nodes=1)
         # submit jobs, if any exceptions, cancel all jobs
         try:
-            array_job_id = matador.slurm.submit_slurm_script(slurm_fname, num_array_tasks=self.max_num_nodes)
+            array_job_id = matador.slurm.submit_slurm_script(relax_fname, num_array_tasks=self.max_num_nodes)
             logging.info('Submitted job array: {}'.format(array_job_id))
-            monitor_job_id = matador.slurm.submit_slurm_script(slurm_fname, depend_on_job=array_job_id)
+            monitor_job_id = matador.slurm.submit_slurm_script(monitor_fname, depend_on_job=array_job_id)
             logging.info('Submitted monitor job: {}'.format(monitor_job_id))
         except:
             logging.error('Something went wrong, trying to cancel all jobs.')
