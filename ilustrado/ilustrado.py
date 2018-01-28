@@ -344,11 +344,19 @@ class ArtificialSelector(object):
                         assert newborn.get('parents') is not None
                         self.scrape_result(newborn)
 
-            # if there are not enough unrelaxed structures after that run, then resubmit
+            # if there are not enough unrelaxed structures after that run, clean up then resubmit
             if len(self.next_gen) < self.population:
                 import matador.slurm
+                from matador.compute import reset_job_folder_and_count_remaining
                 slurm_dict = matador.slurm.get_slurm_env(fail_loudly=True)
-                if self.max_num_nodes > self.population - len(self.next_gen):
+                num_remaining = reset_job_folder_and_count_remaining()
+
+                if num_remaining < self.population - len(self.next_gen):
+                    logging.warning('There were too many failures, not enough remaining calculations to reach target.')
+                    logging.warning('Consider restarting with a larger allowed failure_ratio.')
+                    exit('Failed to return enough successful structures to continue, exiting...')
+
+                if self.max_num_nodes > num_remaining:
                     logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
                     self.max_num_nodes = self.population - len(self.next_gen)
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
