@@ -289,6 +289,16 @@ class ArtificialSelector(object):
         elif self.compute_mode == 'slurm':
             self.batch_birth()
 
+        if len(self.next_gen) < self.population:
+            logging.warning('Next gen is smaller than desired population.')
+        assert len(self.next_gen) >= self.population
+
+        self.next_gen.rank()
+        logging.info('Ranked structures in generation {}'.format(len(self.generations)))
+        if not self.testing:
+            cleaned = self.next_gen.clean()
+            logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations), cleaned))
+
         self.enforce_elitism()
         self.reset_and_dump()
         print(self.generations[-1])
@@ -574,16 +584,6 @@ class ArtificialSelector(object):
             logging.warning('Failed to return enough successful structures to continue...')
             print('Failed to return enough successful structures to continue, exiting...')
             exit()
-
-        if len(self.next_gen) < self.population:
-            logging.warning('Next gen is smaller than desired population.')
-        assert len(self.next_gen) >= self.population
-
-        self.next_gen.rank()
-        logging.info('Ranked structures in generation {}'.format(len(self.generations)))
-        if not self.testing:
-            cleaned = self.next_gen.clean()
-            logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations), cleaned))
 
     def enforce_elitism(self):
         """ Add elite structures from previous generations
