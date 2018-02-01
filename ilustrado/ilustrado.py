@@ -376,6 +376,8 @@ class ArtificialSelector(object):
                     self.max_num_nodes = self.population - len(self.next_gen)
 
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
+                logging.info('Exiting monitor...')
+                exit('Going to sleep now...')
 
             # otherwise, remove unfinished structures from job file and release control of this generation
             else:
@@ -397,6 +399,8 @@ class ArtificialSelector(object):
             slurm_dict = matador.slurm.get_slurm_env(fail_loudly=True)
             self.write_unrelaxed_generation()
             self.slurm_submit_relaxations_and_monitor(slurm_dict)
+            logging.info('Exiting monitor...')
+            exit('Going to sleep now...')
 
     def slurm_submit_relaxations_and_monitor(self, slurm_dict):
         """ Prepare and submit the appropriate slurm files.
