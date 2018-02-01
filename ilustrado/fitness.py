@@ -91,7 +91,7 @@ class FitnessCalculator(object):
                                 .reshape(len(generation), 1)))
         if self.debug:
             print(structures)
-        hull_dist, _, _ = self.hull.get_hull_distances(structures)
+        hull_dist, _, _ = self.hull.get_hull_distances(structures, precompute=False)
         for ind, populum in enumerate(generation):
             generation[ind]['hull_distance'] = hull_dist[ind]
         return hull_dist

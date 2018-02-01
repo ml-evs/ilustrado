@@ -371,6 +371,10 @@ class ArtificialSelector(object):
                     self.max_num_nodes = self.population - len(self.next_gen)
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
 
+            # otherwise, release control of this generation
+            else:
+                return
+
         # otherwise, generate a new unrelaxed generation and submit
         else:
             logging.info('Initialising new generation...')
@@ -623,10 +627,12 @@ class ArtificialSelector(object):
         logging.info('Added current generation {} to generation list.'
                      .format(len(self.generations)-1))
         # remove interim dump file and create new ones for populace and bourgeoisie
-        if isfile('{}-gencurrent.json'.format(self.run_hash)):
-            remove('{}-gencurrent.json'.format(self.run_hash))
         self.generations[-1].dump(len(self.generations)-1)
         self.generations[-1].dump_bourgeoisie(len(self.generations)-1)
+        if isfile('{}-gencurrent.json'.format(self.run_hash)):
+            remove('{}-gencurrent.json'.format(self.run_hash))
+        if isfile('{}-genunrelaxed.json'.format(self.run_hash)):
+            remove('{}-genunrelaxed.json'.format(self.run_hash))
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
 
     def birth_new_structure(self):
