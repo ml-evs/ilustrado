@@ -423,13 +423,13 @@ class ArtificialSelector(object):
             self.max_num_nodes = self.max_attempts
             logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
 
-        # prepare script to read in results
+        # prepare script to read in results, give it just 1 hr of walltime (it should only need seconds)
         monitor_fname = '{}_monitor.job'.format(self.run_hash)
         compute_string = 'python {} >> ilustrado.out 2>> ilustrado.err'.format(self.entrypoint)
         matador.slurm.write_slurm_submission_script(monitor_fname,
                                                     slurm_dict,
                                                     compute_string,
-                                                    self.walltime_hrs,
+                                                    1,
                                                     template=self.slurm_template,
                                                     num_nodes=1)
         # submit jobs, if any exceptions, cancel all jobs
