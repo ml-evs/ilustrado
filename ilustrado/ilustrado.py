@@ -343,7 +343,6 @@ class ArtificialSelector(object):
                                        fitness_calculator=None)
             # check to see which unrelaxed structures completed successfully
             logging.info('Scanning for completed relaxations...')
-            remaining = []
             for ind, newborn in enumerate(unrelaxed_gen):
                 completed_filename = 'completed/{}.castep'.format(newborn['source'][0])
                 if isfile(completed_filename):
@@ -355,31 +354,40 @@ class ArtificialSelector(object):
                         newborn.update(doc)
                         assert newborn.get('parents') is not None
                         self.scrape_result(newborn)
-                    else:
-                        remaining.append(newborn['source'][0] + '.res')
 
             # if there are not enough unrelaxed structures after that run, clean up then resubmit
+            logging.info('Found enough {} structures of target {}'.format(len(self.next_gen), self.population))
             if len(self.next_gen) < self.population:
+                logging.info('Initialising new relaxation jobs...')
                 import matador.slurm
                 from matador.compute import reset_job_folder_and_count_remaining
                 slurm_dict = matador.slurm.get_slurm_env(fail_loudly=True)
                 num_remaining = reset_job_folder_and_count_remaining()
 
+                # check if we can even finish this generation
                 if num_remaining < self.population - len(self.next_gen):
                     logging.warning('There were too many failures, not enough remaining calculations to reach target.')
                     logging.warning('Consider restarting with a larger allowed failure_ratio.')
                     exit('Failed to return enough successful structures to continue, exiting...')
 
+                # adjust number of nodes so we don't get stuck in the queue
                 if self.max_num_nodes > num_remaining:
                     logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
                     self.max_num_nodes = self.population - len(self.next_gen)
+
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
 
             # otherwise, remove unfinished structures from job file and release control of this generation
             else:
-                for structure in remaining:
+                logging.info('Found enough structures to continue!'.format())
+                completed_filename = 'completed/{}.castep'.format(newborn['source'][0])
+                count = 0
+                for doc in unrelaxed_gen:
+                    structure = doc['source'][0] + '.res'
                     if isfile(structure):
                         remove(structure)
+                        count += 1
+                logging.info('Removed {} structures from job folder.'.format(count))
                 return
 
         # otherwise, generate a new unrelaxed generation and submit
