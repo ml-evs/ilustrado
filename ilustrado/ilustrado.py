@@ -332,6 +332,7 @@ class ArtificialSelector(object):
         print(entry)
         fname = '{}-genunrelaxed.json'.format(self.run_hash)
         if isfile(fname):
+            logging.info('Found existing generation to be relaxed...')
             # load the unrelaxed structures into a dummy generation
             assert isfile(fname)
             unrelaxed_gen = Generation(self.run_hash,
@@ -342,6 +343,7 @@ class ArtificialSelector(object):
                                        fitness_calculator=None)
             # check to see which unrelaxed structures completed successfully
             logging.info('Scanning for completed relaxations...')
+            remaining = []
             for ind, newborn in enumerate(unrelaxed_gen):
                 completed_filename = 'completed/{}.castep'.format(newborn['source'][0])
                 if isfile(completed_filename):
@@ -353,6 +355,8 @@ class ArtificialSelector(object):
                         newborn.update(doc)
                         assert newborn.get('parents') is not None
                         self.scrape_result(newborn)
+                    else:
+                        remaining.append(newborn['source'][0] + '.res')
 
             # if there are not enough unrelaxed structures after that run, clean up then resubmit
             if len(self.next_gen) < self.population:
@@ -371,8 +375,11 @@ class ArtificialSelector(object):
                     self.max_num_nodes = self.population - len(self.next_gen)
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
 
-            # otherwise, release control of this generation
+            # otherwise, remove unfinished structures from job file and release control of this generation
             else:
+                for structure in remaining:
+                    if isfile(structure):
+                        remove(structure)
                 return
 
         # otherwise, generate a new unrelaxed generation and submit
@@ -743,7 +750,7 @@ class ArtificialSelector(object):
         """
         if not isfile(('{}-gen0.json').format(self.run_hash)):
             exit('Failed to load run, files missing for {}'.format(self.run_hash))
-        if isfile(('{}-gencurrent.json').format(self.run_hash)):
+        if isfile(('{}-gencurrent.json').format(self.run_hash)) and self.compute_mode != 'slurm':
             incomplete = True
             logging.info('Found incomplete generation for {}'.format(self.run_hash))
         else:
