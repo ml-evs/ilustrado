@@ -10,7 +10,7 @@ __version__ = require('ilustrado')[0].version
 from matador.scrapers.castep_scrapers import res2dict, castep2dict, cell2dict, param2dict
 from matador.export import generate_hash, doc2res
 from matador.similarity.similarity import get_uniq_cursor
-from matador.similarity.pdf_similarity import PDF
+from matador.similarity.pdf_similarity import PDFFactory
 from matador.utils.chem_utils import get_formula_from_stoich
 from matador.hull import QueryConvexHull
 # external libraries
@@ -94,7 +94,7 @@ class ArtificialSelector(object):
             'population': 25, 'elitism': 0.2, 'max_num_mutations': 3, 'max_num_atoms': 30,
             # other GA options
             'best_from_stoich': True, 'mutations': None, 'structure_filter': None,
-            'check_dupes': 1, 'check_dupes_hull': False, 'failure_ratio': 5,
+            'check_dupes': 1, 'check_dupes_hull': True, 'failure_ratio': 5,
             # logistical and compute parameters
             'compute_mode': 'direct', 'nodes': None, 'ncores': None, 'nprocs': 1, 'relaxer_params': None,
             'executable': 'castep', 'max_num_nodes': None, 'walltime_hrs': None, 'slurm_template': None,
@@ -204,11 +204,8 @@ class ArtificialSelector(object):
         # if we're checking hull pdfs too, make this list now
         if self.check_dupes_hull:
             print('Computing extra PDFs from hull...')
-            import progressbar
-            bar = progressbar.ProgressBar(term_width=80)
-            self.extra_pdfs = []
-            for doc in bar(self.hull.query.cursor):
-                self.extra_pdfs.append(PDF(doc, projected=True))
+            PDFFactory(self.hull.cursor)
+            self.extra_pdfs = [doc['pdf'] for doc in self.hull.cursor]
         else:
             self.extra_pdfs = None
         assert self.check_dupes in [0, 1, 2]
@@ -376,8 +373,6 @@ class ArtificialSelector(object):
                     self.max_num_nodes = self.population - len(self.next_gen)
 
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
-                logging.info('Exiting monitor...')
-                exit('Going to sleep now...')
 
             # otherwise, remove unfinished structures from job file and release control of this generation
             else:
@@ -399,8 +394,6 @@ class ArtificialSelector(object):
             slurm_dict = matador.slurm.get_slurm_env(fail_loudly=True)
             self.write_unrelaxed_generation()
             self.slurm_submit_relaxations_and_monitor(slurm_dict)
-            logging.info('Exiting monitor...')
-            exit('Going to sleep now...')
 
     def slurm_submit_relaxations_and_monitor(self, slurm_dict):
         """ Prepare and submit the appropriate slurm files.
@@ -427,13 +420,13 @@ class ArtificialSelector(object):
             self.max_num_nodes = self.max_attempts
             logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
 
-        # prepare script to read in results, give it just 1 hr of walltime (it should only need seconds)
+        # prepare script to read in results
         monitor_fname = '{}_monitor.job'.format(self.run_hash)
         compute_string = 'python {} >> ilustrado.out 2>> ilustrado.err'.format(self.entrypoint)
         matador.slurm.write_slurm_submission_script(monitor_fname,
                                                     slurm_dict,
                                                     compute_string,
-                                                    1,
+                                                    self.walltime_hrs,
                                                     template=self.slurm_template,
                                                     num_nodes=1)
         # submit jobs, if any exceptions, cancel all jobs
