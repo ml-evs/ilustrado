@@ -24,7 +24,7 @@ def main():
     print('Filtering unique structures... {}'.format(len(hull.hull_cursor)))
     # uniq_list, _, _, _ = list(get_uniq_cursor(hull.hull_cursor[1:-1], debug=False))
     # cursor = [hull.hull_cursor[1:-1][ind] for ind in uniq_list]
-    cursor = hull.hull_cursor[1:-1]
+    cursor = hull.hull_cursor
     print('Final cursor length... {}'.format(len(cursor)))
     print('over {} stoichiometries...'.format(len(set([get_formula_from_stoich(doc['stoichiometry'])
                                                        for doc in cursor]))))
