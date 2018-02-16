@@ -206,6 +206,9 @@ class ArtificialSelector(object):
             print('Computing extra PDFs from hull...')
             PDFFactory(self.hull.cursor)
             self.extra_pdfs = [doc['pdf'] for doc in self.hull.cursor]
+            # remove pdf object from cursor so generation can be serialized
+            for ind, doc in enumerate(self.hull.cursor):
+                del self.hull.cursor[ind]['pdf']
         else:
             self.extra_pdfs = None
         assert self.check_dupes in [0, 1, 2]
