@@ -922,8 +922,9 @@ class ArtificialSelector(object):
         cursor = [cursor[ind] for ind in uniq_inds]
         for doc in cursor:
             source = [src.replace('.castep', '.res') for src in doc['source'] if '-GA-' in src or src.endswith('.castep') or src.endswith('.res')]
+            source = source[0].split('/')[-1]
             if len(source) == 0:
                 print('Issue writing {}'.format(doc['source']))
                 continue
             else:
-                doc2res(doc, '{}/{}'.format(path, source[0]), overwrite=False, hash_dupe=False)
+                doc2res(doc, '{}/{}'.format(path, source), overwrite=False, hash_dupe=False)
