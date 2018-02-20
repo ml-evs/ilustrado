@@ -11,64 +11,64 @@ Subpackages
 Submodules
 ----------
 
-ilustrado\.adapt module
------------------------
+ilustrado.adapt module
+----------------------
 
 .. automodule:: ilustrado.adapt
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.analysis module
---------------------------
+ilustrado.analysis module
+-------------------------
 
 .. automodule:: ilustrado.analysis
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.crossover module
----------------------------
+ilustrado.crossover module
+--------------------------
 
 .. automodule:: ilustrado.crossover
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.fitness module
--------------------------
+ilustrado.fitness module
+------------------------
 
 .. automodule:: ilustrado.fitness
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.generation module
-----------------------------
+ilustrado.generation module
+---------------------------
 
 .. automodule:: ilustrado.generation
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.ilustrado module
----------------------------
+ilustrado.ilustrado module
+--------------------------
 
 .. automodule:: ilustrado.ilustrado
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.mutate module
-------------------------
+ilustrado.mutate module
+-----------------------
 
 .. automodule:: ilustrado.mutate
     :members:
     :undoc-members:
     :show-inheritance:
 
-ilustrado\.util module
-----------------------
+ilustrado.util module
+---------------------
 
 .. automodule:: ilustrado.util
     :members:
