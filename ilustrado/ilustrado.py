@@ -56,9 +56,13 @@ class ArtificialSelector(object):
         | mutations         : list(str), list of mutation names to use,
         | structure_filter  : fn(doc), any function that takes a matador doc and returns True
                               or False,
-        | check_dupes       : int, 0 (no checking), 1 (check relaxed structure only), 2 (check
-                              unrelaxed mutant) [NOT YET IMPLEMENTED]
-        | check_dupes_hull  : bool, compare pdf with all hull structures,
+        | check_dupes       : bool, if True, filter relaxed tructures for uniqueness on-the-fly (DEFAULT: True)
+        | check_dupes_hull  : bool, compare pdf with all hull structures (DEFAULT: True)
+        | sandbagging       : bool, whether or not to disfavour nearby compositions (DEFAULT: False)
+        | minsep_dict       : dict, dictionary containing element-specific minimum separations, e.g.
+                              {('K', 'K'): 2.5, ('K', 'P'): 2.0}. These should only be set such that
+                              atoms do not overlap; let the DFT deal with bond lengths. No effort is made
+                              to push apart atoms that are too close, the trial will simply be discarded. (DEFAULT: None)
         | max_num_mutations : int, maximum number of mutations to perform on a single structure,
         | max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
         | nodes             : list(str), list of node names to run on,
@@ -94,7 +98,8 @@ class ArtificialSelector(object):
             'population': 25, 'elitism': 0.2, 'max_num_mutations': 3, 'max_num_atoms': 30,
             # other GA options
             'best_from_stoich': True, 'mutations': None, 'structure_filter': None,
-            'check_dupes': 1, 'check_dupes_hull': True, 'failure_ratio': 5,
+            'check_dupes': True, 'check_dupes_hull': True, 'failure_ratio': 5,
+            'sandbagging': False, 'minsep_dict': None,
             # logistical and compute parameters
             'compute_mode': 'direct', 'nodes': None, 'ncores': None, 'nprocs': 1, 'relaxer_params': None,
             'executable': 'castep', 'max_num_nodes': None, 'walltime_hrs': None, 'slurm_template': None,
@@ -198,7 +203,8 @@ class ArtificialSelector(object):
             self.testing = True
         print('Done!')
         self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
-                                                    hull=self.hull, debug=self.debug)
+                                                    hull=self.hull, sandbagging=self.sandbagging,
+                                                    debug=self.debug)
         logging.debug('Successfully initialised fitness calculator.')
 
         # if we're checking hull pdfs too, make this list now
@@ -666,6 +672,7 @@ class ArtificialSelector(object):
                         max_num_mutations=self.max_num_mutations,
                         max_num_atoms=self.max_num_atoms,
                         structure_filter=self.structure_filter,
+                        minsep_dict=self.minsep_dict,
                         debug=self.debug)
         newborn_source_id = len(self.next_gen)
         if self.compute_mode is 'direct':
@@ -714,7 +721,7 @@ class ArtificialSelector(object):
 
             result = strip_useless(result)
             dupe = self.is_newborn_dupe(result, extra_pdfs=self.extra_pdfs)
-            if dupe and self.check_dupes in [1, 2]:
+            if dupe and bool(self.check_dupes):
                 status = 'Duplicate'
                 if proc is not None:
                     logging.debug('Newborn {} is a duplicate and will not be included.'
