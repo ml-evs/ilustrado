@@ -14,9 +14,11 @@ class FitnessCalculator(object):
         | fitness_metric   : str, either 'dummy', 'hull' or 'hull_test'.
         | fitness_function : fn, function to operate on numpy array of raw fitness values,
         | hull             : QueryConvexHull, matador hull from which to calculate metastability,
+        | sandbagging      : bool, whether or not to "sandbag" particular compositions, i.e. lower
+                             a structure's fitness based on the number of nearby phases
 
     """
-    def __init__(self, fitness_metric='dummy', fitness_function=None, hull=None, debug=False):
+    def __init__(self, fitness_metric='dummy', fitness_function=None, hull=None, sandbagging=False, debug=False):
         """ Initialise fitness calculator, if from hull then
         extract chemical potentials.
         """
@@ -38,6 +40,12 @@ class FitnessCalculator(object):
             self.chempots = hull.match
         else:
             raise RuntimeError('No recognised fitness metric given.')
+
+        self.sandbagging = False
+        if sandbagging:
+            self.sandbagging = True
+            self.sandbag_multipliers = dict()
+
         if fitness_function is None:
             self.fitness_function = default_fitness_function
         else:
@@ -60,8 +68,54 @@ class FitnessCalculator(object):
         fitnesses = self.fitness_function(raw)
 
         for ind, populum in enumerate(generation):
-            generation[ind]['fitness'] = fitnesses[ind]
             generation[ind]['raw_fitness'] = raw[ind]
+            generation[ind]['fitness'] = fitnesses[ind]
+
+        if self.sandbagging:
+            self.update_sandbag_multipliers(generation)
+            # print(self.sandbag_multipliers)
+            self.apply_sandbag_multipliers(generation)
+
+
+    def update_sandbag_multipliers(self, generation, modifier=0.95):
+        """ Assign composition penalty based on number of nearby structures.
+        Updates fitness.sandbag_multipliers to a dictionary with chemical concentration as keys
+        and values of fitness penalty.
+
+        Input:
+
+            | generation: list(dict), list of optimised structures.
+
+        """
+        for structure in generation:
+            if tuple(structure['concentration']) in self.sandbag_multipliers:
+                self.sandbag_multipliers[tuple(structure['concentration'])] *= modifier
+            else:
+                self.sandbag_multipliers[tuple(structure['concentration'])] = modifier
+
+    def apply_sandbag_multipliers(self, generation, locality=0.05):
+        """ Scale the generation's fitness by the sandbag modifier. This
+        updates the 'fitness' key and the 'modifier' key (total scaling) of each document
+        in the generation.
+
+        Input:
+
+            | generation: list(dict), list of optimised structures.
+
+        Args:
+
+            | locality: float, tolerance by which two structures are "nearby"
+
+        """
+        for ind, structure in enumerate(generation):
+            generation[ind]['modifier'] = 1
+            for concentration in self.sandbag_multipliers:
+                if np.sqrt(np.sum(np.abs(np.asarray(structure['concentration']) - np.asarray(list(concentration)))**2)) <= locality:
+                    # print(structure['concentration'], concentration)
+                    generation[ind]['modifier'] *= self.sandbag_multipliers[concentration]
+            generation[ind]['fitness'] *= generation[ind]['modifier']
+            # print(generation[ind]['stoichiometry'], generation[ind]['modifier'])
+
 
     def _get_hull_distance(self, generation):
         """ Assign distance from the hull from hull for generation,
