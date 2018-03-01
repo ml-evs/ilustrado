@@ -12,7 +12,9 @@ import logging
 
 
 def adapt(possible_parents, mutation_rate, crossover_rate,
-          mutations=None, max_num_mutations=3, max_num_atoms=40, structure_filter=None, debug=False):
+          mutations=None, max_num_mutations=3, max_num_atoms=40,
+          structure_filter=None, minsep_dict=None,
+          debug=False):
     """ Take a list of possible parents and randomly adapt
     according to given mutation weightings.
 
@@ -28,6 +30,8 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         | max_num_mutations : int, rand(1, this) mutations will be performed,
         | max_num_atoms     : int, any structures with more than this many atoms will be filtered out.
         | structure_filter  : fn(doc), custom filter to pass to check_feasible.
+        | minsep_dict       : dict, dictionary containing element-specific minimum separations, e.g.
+                              {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
     Returns:
 
@@ -65,7 +69,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         _mutations = None
 
     # loop over *SAME* branch (i.e. crossover vs mutation) until valid cell is produced
-    # with max attempts of 1000, at which point everything will crash
+    # with max attempts of 1000, at which point it will continue with a terrible cell
     valid_cell = False
     max_restarts = 1000
     num_iter = 0
@@ -79,30 +83,34 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                                  max_num_mutations=max_num_mutations,
                                  debug=debug)
                 parents = [parent]
-                valid_cell = check_feasible(newborn, parents, max_num_atoms, structure_filter=structure_filter)
             except Exception as oops:
                 if debug:
                     print_exc()
                 logging.warning('Mutation failed with error {}'.format(oops))
                 valid_cell = False
+            valid_cell = check_feasible(newborn, parents, max_num_atoms,
+                                        structure_filter=structure_filter, minsep_dict=minsep_dict)
         # otherwise, do crossover
         else:
             parents = [strip_useless(parent) for parent in np.random.choice(possible_parents, size=2, replace=False)]
             try:
                 newborn = crossover(parents, debug=debug)
-                valid_cell = check_feasible(newborn, parents, max_num_atoms, structure_filter=structure_filter)
             except Exception as oops:
                 if debug:
                     print_exc()
                 logging.warning('Crossover failed with error {}'.format(oops))
                 valid_cell = False
+            valid_cell = check_feasible(newborn, parents, max_num_atoms,
+                                        structure_filter=structure_filter, minsep_dict=minsep_dict)
         num_iter += 1
+
+    logging.info('Initialised newborn after {} trials'.format(num_iter))
     if num_iter == max_restarts:
-        logging.warning('Max restarts reached in mutations, something has gone wrong...\
-                         running with possibly unphysical cell')
+        logging.warning('Max restarts reached in mutations, something has gone wrong... '
+                        'running with possibly unphysical cell')
         newborn = adapt(possible_parents, mutation_rate, crossover_rate,
                         mutations=mutations, max_num_mutations=max_num_mutations,
-                        max_num_atoms=max_num_atoms, debug=debug)
+                        max_num_atoms=max_num_atoms, minsep_dict=minsep_dict, debug=debug)
     # set parents in newborn dict
     if 'parents' not in newborn:
         newborn['parents'] = []
@@ -115,13 +123,13 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     return newborn
 
 
-def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, debug=False):
+def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep_dict=None, debug=False):
     """ Check if a mutated/newly-born cell is "feasible".
 
     Here, feasible means:
 
         * number density within 25% of pre-mutation/birth level,
-        * no overlapping atoms,
+        * no overlapping atoms, parameterised by minsep_dict,
         * cell angles between 50 and 130 degrees,
         * fewer than max_num_atoms in the cell,
         * ensure number of atomic types is maintained,
@@ -136,6 +144,9 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, debug=
     Args:
 
         | structure_filter : fn, any function that takes a matador document and returns True or False.
+        | minsep_dict       : dict, dictionary containing element-specific minimum separations, e.g.
+                              {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+
 
     Returns:
 
@@ -153,7 +164,7 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, debug=
     if 'num_atoms' not in mutant or 'num_atoms' != len(mutant['atom_types']):
         mutant['num_atoms'] = len(mutant['atom_types'])
     if mutant['num_atoms'] > max_num_atoms:
-        message = 'Mutant with {} contained too many atoms.'.format(', '.join(mutant['mutations']))
+        message = 'Mutant with {} contained too many atoms ({} vs {}).'.format(', '.join(mutant['mutations']), mutant['num_atoms'], max_num_atoms)
         logging.debug(message)
         if debug:
             print(message)
@@ -175,22 +186,7 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, debug=
             print(message)
         return False
     # now check element-agnostic minseps
-    if 'positions_abs' not in mutant:
-        mutant['positions_abs'] = frac2cart(mutant['lattice_cart'], mutant['positions_frac'])
-    poscart = mutant['positions_abs']
-    distances = np.array([])
-    for prod in product(range(-1, 2), repeat=3):
-        trans = np.zeros((3))
-        for ind, multi in enumerate(prod):
-            trans += np.asarray(mutant['lattice_cart'][ind]) * multi
-        distances = np.append(distances, cdist(poscart+trans, poscart))
-    distances = np.ma.masked_where(distances < 1e-12, distances)
-    distances = distances.compressed()
-    if np.min(distances) <= 1.4:
-        message = 'Mutant with {} failed minsep check.'.format(', '.join(mutant['mutations']))
-        logging.debug(message)
-        if debug:
-            print(message)
+    if not minseps_feasible(mutant, minsep_dict=minsep_dict, debug=debug):
         return False
     # check all cell angles are between 60 and 120.
     if 'lattice_abc' not in mutant:
@@ -214,4 +210,60 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, debug=
         if debug:
             print(message)
         return False
+    return True
+
+def minseps_feasible(mutant, minsep_dict=None, debug=False):
+    """ Check if minimum separations between species of atom are satisfied by mutant.
+
+    Input:
+
+        | mutant      : dict, trial mutated structure
+        | minsep_dict : dict, dictionary containing element-specific minimum separations, e.g.
+                        {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+
+    Returns:
+
+        | True if minseps are greater than desired value else False.
+
+    """
+    elems = set(mutant['atom_types'])
+    elem_pairs = set()
+    for elem in elems:
+        for _elem in elems:
+            elem_key = tuple(sorted([elem, _elem]))
+            elem_pairs.add(elem_key)
+
+    if minsep_dict is None:
+        minsep_dict = dict()
+    else:
+        marked_for_del = []
+        for key in minsep_dict:
+            if tuple(sorted(key)) != tuple(key):
+                minsep_dict[tuple(sorted(key))] = minsep_dict[key]
+                marked_for_del.append(key)
+        for key in marked_for_del:
+            del minsep_dict[key]
+
+    # set default values of 1.5 A
+    for elem_key in elem_pairs:
+        if elem_key not in minsep_dict:
+            minsep_dict[elem_key] = 1.5
+
+    if 'positions_abs' not in mutant:
+        mutant['positions_abs'] = frac2cart(mutant['lattice_cart'], mutant['positions_frac'])
+    poscart = mutant['positions_abs']
+
+    for prod in product(range(-1, 2), repeat=3):
+        trans = np.zeros((3))
+        for ind, multi in enumerate(prod):
+            trans += np.asarray(mutant['lattice_cart'][ind]) * multi
+        distances = cdist(poscart+trans, poscart)
+        distances = np.ma.masked_where(distances < 1e-12, distances)
+        for i in range(len(distances)):
+            for j in range(len(distances[i])):
+                min_dist = minsep_dict[tuple(sorted([mutant['atom_types'][i], mutant['atom_types'][j]]))]
+                if distances[i][j] < min_dist:
+                    message = 'Mutant with {} failed minsep check.'.format(', '.join(mutant['mutations']))
+                    logging.debug(message)
+                    return False
     return True
