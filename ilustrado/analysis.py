@@ -1,14 +1,13 @@
 # coding: utf-8
 """ Some assorted analysis functions. """
-import seaborn as sns
-import matplotlib.pyplot as plt
-
 
 def fitness_swarm_plot(generations, ax=None, save=False):
     """ Make a swarm plot of the fitness of all generations. """
     import matplotlib
     matplotlib.use('Agg')
     import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
     sns.set_palette("Dark2", desat=.5)
     if ax is None:
         fig = plt.figure(figsize=(10, 8))
@@ -29,6 +28,8 @@ def fitness_swarm_plot(generations, ax=None, save=False):
 def plot_new_2d_hull(generations, hull, points=True, label_hull=True, save=True):
     """ Add new structures to old ConvexHull plot. """
     import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111)
     hull.set_plot_param()
