@@ -3,6 +3,7 @@ import unittest
 from os.path import realpath
 from os import uname, remove, chdir
 from multiprocessing import cpu_count
+from matador.scrapers.castep_scrapers import res2dict
 import glob
 REAL_PATH = '/'.join(realpath(__file__).split('/')[:-1]) + '/'
 
@@ -22,11 +23,12 @@ def hull_test():
     else:
         cpus = cpu_count()
 
+    res_files = glob.glob(REAL_PATH + '/data/hull-KP-KSnP_pub/*.res')
+    cursor = [res2dict(_file, db=True)[0] for _file in res_files]
+
     # prepare best structures from hull as gene pool
-    query = DBQuery(composition=['KP'], db=['KP'], cutoff=[650, 651],
-                    kpoint_tolerance=0.0, subcmd='hull', biggest=True, source=True)
-    hull = QueryConvexHull(query,
-                           subcmd='hull', no_plot=True, kpoint_tolerance=0.03, source=True,
+    hull = QueryConvexHull(cursor=cursor, elements=['K', 'P'],
+                           subcmd='hull', no_plot=True, source=True,
                            summary=True, hull_cutoff=0)
 
     # uniq_list, _, _, _ = list(get_uniq_cursor(hull.hull_cursor[1:-1], debug=False))
@@ -36,15 +38,23 @@ def hull_test():
 
     print('Running on {} cores on {}.'.format(cpus, uname()[1]))
 
+    minsep_dict = {('K', 'K'): 2.5}
+
     ArtificialSelector(gene_pool=cursor,
                        seed='KP',
                        hull=hull,
                        debug=False,
                        fitness_metric='hull',
                        nprocs=cpus,
+                       check_dupes=0,
+                       check_dupes_hull=False,
+                       sandbagging=True,
+                       minsep_dict=minsep_dict,
                        ncores=1,
                        testing=True,
+                       mutations=['nudge_positions', 'permute_atoms', 'random_strain', 'vacancy'],
                        max_num_mutations=1,
+                       max_num_atoms=50,
                        mutation_rate=0.5, crossover_rate=0.5,
                        num_generations=3, population=15,
                        num_survivors=10, elitism=0.5,
@@ -59,10 +69,16 @@ def hull_test():
                                   fitness_metric='hull',
                                   recover_from=run_hash,
                                   load_only=True,
+                                  check_dupes=0,
+                                  check_dupes_hull=False,
+                                  minsep_dict=minsep_dict,
+                                  mutations=['nudge_positions', 'permute_atoms', 'random_strain', 'vacancy'],
+                                  sandbagging=True,
                                   nprocs=cpus,
                                   ncores=1,
                                   testing=True,
                                   max_num_mutations=1,
+                                  max_num_atoms=50,
                                   mutation_rate=0.5, crossover_rate=0.5,
                                   num_generations=10, population=15,
                                   num_survivors=10, elitism=0.5,
