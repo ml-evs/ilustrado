@@ -212,6 +212,7 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep
         return False
     return True
 
+
 def minseps_feasible(mutant, minsep_dict=None, debug=False):
     """ Check if minimum separations between species of atom are satisfied by mutant.
 
@@ -244,10 +245,11 @@ def minseps_feasible(mutant, minsep_dict=None, debug=False):
         for key in marked_for_del:
             del minsep_dict[key]
 
-    # set default values of 1.5 A
+    # use 0.5 * average covalent radii (NOT just average covalent radius) as rough default minsep guess
+    import periodictable
     for elem_key in elem_pairs:
         if elem_key not in minsep_dict:
-            minsep_dict[elem_key] = 1.5
+                minsep_dict[elem_key] = sum([periodictable.elements.symbol(elem).covalent_radius for elem in elem_key]) / 2.0
 
     if 'positions_abs' not in mutant:
         mutant['positions_abs'] = frac2cart(mutant['lattice_cart'], mutant['positions_frac'])
