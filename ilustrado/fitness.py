@@ -73,9 +73,7 @@ class FitnessCalculator(object):
 
         if self.sandbagging:
             self.update_sandbag_multipliers(generation)
-            # print(self.sandbag_multipliers)
             self.apply_sandbag_multipliers(generation)
-
 
     def update_sandbag_multipliers(self, generation, modifier=0.95):
         """ Assign composition penalty based on number of nearby structures.
@@ -111,11 +109,8 @@ class FitnessCalculator(object):
             generation[ind]['modifier'] = 1
             for concentration in self.sandbag_multipliers:
                 if np.sqrt(np.sum(np.abs(np.asarray(structure['concentration']) - np.asarray(list(concentration)))**2)) <= locality:
-                    # print(structure['concentration'], concentration)
                     generation[ind]['modifier'] *= self.sandbag_multipliers[concentration]
             generation[ind]['fitness'] *= generation[ind]['modifier']
-            # print(generation[ind]['stoichiometry'], generation[ind]['modifier'])
-
 
     def _get_hull_distance(self, generation):
         """ Assign distance from the hull from hull for generation,
@@ -165,7 +160,7 @@ class FitnessCalculator(object):
         return (0.05 * np.random.rand(len(generation)) - 0.01).tolist()
 
 
-def default_fitness_function(raw, c=100, offset=0.1):
+def default_fitness_function(raw, c=50, offset=0.075):
     """ Default fitness function: logistic function.
 
     Input:
