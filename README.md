@@ -21,7 +21,7 @@ The entrypoint is a Python script that creates an `ArtificialSelector` object wi
 - `compute_mode='direct'` involves one `ilustrado` processes spawning `mpirun` calls either on local or remote partitions (i.e. either a node list is passed for running on a local cluster, or `ilustrado` itself is submitted as a HPC job). In this case, the user must manually restart the GA when the job finishes.
 - `compute_mode='slurm'` performs the GA in interruptible steps; submitting `ilustrado` as a job will lead to the submission of many slurm array jobs for the relaxation, and a dependency job that re-runs the `ilustrado` process to check on the relaxations. In this case, the user only needs to submit one job (tested on 6400 cores/200 nodes without issue).
 
-[1] Deaven, D. M.; Ho, K. M. Molecular Geometry Optimization with a Genetic Algorithm. Phys. Rev. Lett. 1995, 75, 288, (10.1103/PhysRevLett.75.288)[https://doi.org/10.1103/PhysRevLett.75.288]
+[1] Deaven, D. M.; Ho, K. M. Molecular Geometry Optimization with a Genetic Algorithm. Phys. Rev. Lett. 1995, 75, 288, [10.1103/PhysRevLett.75.288](https://doi.org/10.1103/PhysRevLett.75.288)
 
 
 ## New in v0.3b:
