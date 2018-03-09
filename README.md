@@ -32,4 +32,4 @@ The entrypoint is a Python script that creates an `ArtificialSelector` object wi
 
 ## API Docs
 
-(Auto-generated API docs)[http://www.tcm.phy.cam.ac.uk/~me388/ilustrado/ilustrado.html]
+- [Auto-generated API docs](http://www.tcm.phy.cam.ac.uk/~me388/ilustrado/ilustrado.html)
