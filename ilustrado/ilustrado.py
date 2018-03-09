@@ -1,20 +1,4 @@
 """ This file implements the GA algorithm and acts as main(). """
-# ilustrado modules
-from .adapt import adapt
-from .generation import Generation
-from .fitness import FitnessCalculator
-from .util import strip_useless
-from pkg_resources import require
-__version__ = require('ilustrado')[0].version
-# matador modules
-from matador.scrapers.castep_scrapers import res2dict, castep2dict, cell2dict, param2dict
-from matador.export import generate_hash, doc2res
-from matador.similarity.similarity import get_uniq_cursor
-from matador.similarity.pdf_similarity import PDFFactory
-from matador.utils.chem_utils import get_formula_from_stoich
-from matador.hull import QueryConvexHull
-# external libraries
-import numpy as np
 # standard library
 import multiprocessing as mp
 import subprocess as sp
@@ -27,61 +11,78 @@ from traceback import print_exc
 from json import dumps, dump
 from sys import exit
 from copy import deepcopy, copy
+# external libraries
+import numpy as np
+from pkg_resources import require
+# matador modules
+from matador.scrapers.castep_scrapers import res2dict, castep2dict, cell2dict, param2dict
+from matador.export import generate_hash, doc2res
+from matador.similarity.similarity import get_uniq_cursor
+from matador.similarity.pdf_similarity import PDFFactory
+from matador.utils.chem_utils import get_formula_from_stoich
+from matador.hull import QueryConvexHull
+# ilustrado modules
+from .adapt import adapt
+from .generation import Generation
+from .fitness import FitnessCalculator
+from .util import strip_useless
+
+__version__ = require('ilustrado')[0].version
 
 
-class ArtificialSelector(object):
+class ArtificialSelector:
     """ ArtificialSelector takes an initial gene pool
     and applies a genetic algorithm to optimise some
     fitness function.
 
-    Args:
+    Keyword Arguments:
 
-        | gene_pool         : list(dict), initial cursor to use as "Generation 0",
-        | seed              : str, seed name of cell and param files for CASTEP,
-        | fitness_metric    : str, currently either 'hull' or 'test',
-        | hull              : QueryConvexHull, matador QueryConvexHull object to calculate distances,
-        | res_path          : str, path to folder of res files to create hull, if no hull object passed
-        | mutation_rate     : float, rate at which to perform single-parent mutations (DEFAULT: 0.5)
-        | crossover_rate    : float, rate at which to perform crossovers (DEFAULT: 0.5)
-        | num_generations   : int, number of generations to breed before quitting (DEFAULT: 5)
-        | num_survivors     : int, number of structures to survive to next generation for breeding
-                              (DEFAULT: 10)
-        | population        : int, number of structures to breed in any given generation
-                              (DEFAULT: 25)
-        | failure_ratio     : int, maximum number of attempts per success (DEFAULT: 5)
-        | elitism           : float, fraction of next generation to be comprised of elite
-                              structures from previous generation (DEFAULT: 0.2)
-        | best_from_stoich  : bool, whether to always include the best structure from a
-                              stoichiomtery in the next generation,
-        | mutations         : list(str), list of mutation names to use,
-        | structure_filter  : fn(doc), any function that takes a matador doc and returns True
-                              or False,
-        | check_dupes       : bool, if True, filter relaxed tructures for uniqueness on-the-fly (DEFAULT: True)
-        | check_dupes_hull  : bool, compare pdf with all hull structures (DEFAULT: True)
-        | sandbagging       : bool, whether or not to disfavour nearby compositions (DEFAULT: False)
-        | minsep_dict       : dict, dictionary containing element-specific minimum separations, e.g.
-                              {('K', 'K'): 2.5, ('K', 'P'): 2.0}. These should only be set such that
-                              atoms do not overlap; let the DFT deal with bond lengths. No effort is made
-                              to push apart atoms that are too close, the trial will simply be discarded. (DEFAULT: None)
-        | max_num_mutations : int, maximum number of mutations to perform on a single structure,
-        | max_num_atoms     : int, most atoms allowed in a structure post-mutation/crossover,
-        | nodes             : list(str), list of node names to run on,
-        | ncores            : int or list(int) specifying the number of cores used by <nodes> per thread,
-        | nprocs            : int, total number of processes,
-        | recover_from      : str, recover from previous run_hash, by default ilustrado will recover
-                              if it finds only one run hash in the folder
-        | load_only         : bool, only load structures, do not continue breeding (DEFAULT: False)
-        | executable        : str, path to DFT binary (DEFAULT: castep)
-        | compute_mode      : str, either `direct` or `slurm` (DEFAULT: direct)
-        | max_num_nodes     : int, amount of array jobs to run per generation in `slurm` mode,
-        | walltime_hrs      : int, maximum walltime for a SLURM array job,
-        | slurm_template    : str, path to template slurm script that includes module loads etc,
-        | entrypoint        : str, path to script that initialised this object, such that it can
-                              be called by SLURM
-        | debug             : bool, printing level,
-        | testing           : bool, run test code only if true,
-        | verbosity         : int, extra printing level,
-        | loglevel          : str, follows std library logging levels.
+        gene_pool (list(dict))  : initial cursor to use as "Generation 0",
+        seed (str)              : seed name of cell and param files for CASTEP,
+        fitness_metric (str)    : currently either 'hull' or 'test',
+        hull (QueryConvexHull)  : matador QueryConvexHull object to calculate distances,
+        res_path (str)          : path to folder of res files to create hull, if no hull object passed
+        mutation_rate (float)   : rate at which to perform single-parent mutations (DEFAULT: 0.5)
+        crossover_rate (float)  : rate at which to perform crossovers (DEFAULT: 0.5)
+        num_generations (int)   : number of generations to breed before quitting (DEFAULT: 5)
+        num_survivors (int)     : number of structures to survive to next generation for breeding
+                                  (DEFAULT: 10)
+        population (int)        : number of structures to breed in any given generation
+                                  (DEFAULT: 25)
+        failure_ratio (int)     : maximum number of attempts per success (DEFAULT: 5)
+        elitism (float)         : fraction of next generation to be comprised of elite
+                                  structures from previous generation (DEFAULT: 0.2)
+        best_from_stoich (bool) : whether to always include the best structure from a
+                                 stoichiomtery in the next generation,
+        mutations (list(str))   : list of mutation names to use,
+        structure_filter (fn(doc)) : any function that takes a matador doc and returns True
+                                     or False,
+        check_dupes (bool)         : if True, filter relaxed tructures for uniqueness on-the-fly (DEFAULT: True)
+        check_dupes_hull (bool)    : compare pdf with all hull structures (DEFAULT: True)
+        sandbagging (bool)         : whether or not to disfavour nearby compositions (DEFAULT: False)
+        minsep_dict (dict)         : dictionary containing element-specific minimum separations, e.g.
+                                     {('K', 'K'): 2.5, ('K', 'P'): 2.0}. These should only be set such that
+                                     atoms do not overlap; let the DFT deal with bond lengths. No effort is made
+                                     to push apart atoms that are too close, the trial will simply be discarded. (DEFAULT: None)
+        max_num_mutations (int)    : maximum number of mutations to perform on a single structure,
+        max_num_atoms (int)        : most atoms allowed in a structure post-mutation/crossover,
+        nodes (list(str))          : list of node names to run on,
+        ncores (int or list(int))  : specifies the number of cores used by listed `nodes` per thread,
+        nprocs (int)               : total number of processes,
+        recover_from (str)         : recover from previous run_hash, by default ilustrado will recover
+                                     if it finds only one run hash in the folder
+        load_only (bool)           : only load structures, do not continue breeding (DEFAULT: False)
+        executable (str)           : path to DFT binary (DEFAULT: castep)
+        compute_mode (str)         : either `direct` or `slurm` (DEFAULT: direct)
+        max_num_nodes (int)        : amount of array jobs to run per generation in `slurm` mode,
+        walltime_hrs (int)         : maximum walltime for a SLURM array job,
+        slurm_template (str)       : path to template slurm script that includes module loads etc,
+        entrypoint (str)           : path to script that initialised this object, such that it can
+                                     be called by SLURM
+        debug (bool)               : maximum printing level
+        testing (bool)             : run test code only if true
+        verbosity (int)            : extra printing level,
+        loglevel (str)             : follows std library logging levels.
 
     """
     def __init__(self, **kwargs):
@@ -127,7 +128,6 @@ class ArtificialSelector(object):
         print('\033[0m')
 
         print('Loading harsh realities of life...', end=' ')
-
         # post-load checks
         if self.relaxer_params is None:
             self.relaxer_params = dict()
@@ -411,9 +411,9 @@ class ArtificialSelector(object):
     def slurm_submit_relaxations_and_monitor(self, slurm_dict):
         """ Prepare and submit the appropriate slurm files.
 
-        Input:
+        Parameters:
 
-            | slurm_dict: dict, dict containing SLURM environment variables.
+            slurm_dict (dict): dict containing SLURM environment variables.
 
         """
         # prepare script to relax this generation
@@ -661,7 +661,13 @@ class ArtificialSelector(object):
         logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
 
     def birth_new_structure(self):
-        """ Generate a new structure from current settings. """
+        """ Generate a new structure from current settings.
+
+        Returns:
+
+            dict: newborn structure to be optimised
+
+        """
         possible_parents = (self.generations[-1].populace
                             if len(self.generations) == 1
                             else self.generations[-1].bourgeoisie)
@@ -693,14 +699,14 @@ class ArtificialSelector(object):
         with duplicate detection if desired. If the optional arguments are provided,
         extra logging info will be found when running in `direct` mode.
 
-        Input:
+        Parameters:
 
-            | result   : dict, containing output from process
+            result (dict): containing output from process
 
-        Args:
+        Keyword Arguments:
 
-            | proc     : tuple, standard process tuple from above,
-            | newborns : list, of new structures to append result to.
+            proc (tuple)   : standard process tuple from above,
+            newborns (list): of new structures to append result to.
 
         """
         if self.debug:
@@ -752,9 +758,9 @@ class ArtificialSelector(object):
     def kill_all(self, procs):
         """ Loop over processes and kill them all.
 
-        Input:
+        Parameters:
 
-            | procs: list(tuple), list of processes in form documented above.
+            procs (list(tuple)): list of processes in form documented above.
 
         """
         for proc in procs:
@@ -834,14 +840,12 @@ class ArtificialSelector(object):
                                                                                                               self.run_hash))
             assert len(self.next_gen) >= 1
 
-        return
-
     def seed_generation_0(self, gene_pool):
         """ Set up first generation from gene pool.
 
-        Input:
+        Parameters:
 
-            gene_pool: list(dict), list of structure with which to seed generation.
+            gene_pool (list(dict)): list of structure with which to seed generation.
 
         """
         from ilustrado.fitness import default_fitness_function
@@ -898,18 +902,19 @@ class ArtificialSelector(object):
         """ Check each generation for a duplicate structure to the current newborn,
         using PDF calculator from matador.
 
-        Input:
+        Parameters:
 
-            | newborn: dict, new structure to screen against the existing,
+            newborn (dict): new structure to screen against the existing,
 
-        Args:
+        Keyword Arguments:
 
-            | extra_pdfs: list(PDF), any extra PDFs to compare to, e.g. other hull structures
-                          not used to seed any generation
+            extra_pdfs (list(PDF)): any extra PDFs to compare to, e.g. other hull structures
+                                    not used to seed any generation
 
         Returns:
 
-            | True if duplicate, else False.
+            bool: True if duplicate, else False.
+
         """
         for ind, gen in enumerate(self.generations):
             if ind == 0:

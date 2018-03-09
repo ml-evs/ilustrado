@@ -29,5 +29,6 @@ setup(name='ilustrado',
       extras_require={
           'matador': ['matador'],
           'voronoi': ['ajm_group_voronoi_code'],
+          'docs': ['sphinx', 'sphinx_rtd_theme', 'm2r', 'sphinxcontrib-napoleon'],
       },
       zip_safe=False)

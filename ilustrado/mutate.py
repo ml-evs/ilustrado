@@ -15,14 +15,14 @@ from sklearn.cluster import KMeans
 def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     """ Wrap _mutate to check for null/invalid mutations.
 
-    Input:
+    Parameters:
 
-        | parent: dict, parent structure to mutate,
+        parent (dict): parent structure to mutate,
 
-    Args:
+    Keyword Arguments:
 
-        | mutations        : list(fn), list of possible mutation functions to apply,
-        | max_num_mutations: int, maximum number of mutations to apply.
+        mutations (list(fn))    : list of possible mutation functions to apply,
+        max_num_mutations (int) : maximum number of mutations to apply.
 
     """
     mutant = deepcopy(parent)
@@ -48,14 +48,14 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
 def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
     """ Choose a random number of mutations and apply them.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place,
+        mutant (dict): structure to mutate in-place,
 
-    Args:
+    Keyword Arguments:
 
-        | mutations        : list(fn), list of possible mutation functions,
-        | max_num_mutations: int, maximum number of mutations to apply.
+        mutations (list(fn))    : list of possible mutation functions,
+        max_num_mutations (int) : maximum number of mutations to apply.
 
     """
     if mutations is None:
@@ -86,9 +86,9 @@ def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
 def permute_atoms(mutant, debug=False):
     """ Swap the positions of random pairs of atoms.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place.
+        mutant (dict): structure to mutate in-place.
 
     """
     num_atoms = mutant['num_atoms']
@@ -117,9 +117,9 @@ def permute_atoms(mutant, debug=False):
 def vacancy(mutant, debug=False):
     """ Remove a random atom from the structure.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place.
+        mutant (dict): structure to mutate in-place.
 
     """
     vacancy_idx = np.random.randint(0, mutant['num_atoms']-1)
@@ -142,15 +142,15 @@ def voronoi_shuffle(mutant, element_to_remove=None, preserve_stoich=False, debug
     on the remaining sublattice. Cluster the nodes with KMeans, then
     repopulate the clustered Voronoi nodes with atoms of the removed element.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place.
+        mutant (dict): structure to mutate in-place.
 
-    Args:
+    Keyword Arguments:
 
-        | element_to_remove: str, symbol of element to remove,
-        | preserve_stoich  : bool, whether to always reinsert the same number
-                             of atoms.
+        element_to_remove (str) : symbol of element to remove,
+        preserve_stoich (bool)  : whether to always reinsert the same number
+                                  of atoms.
 
     """
     if element_to_remove is None:
@@ -210,9 +210,9 @@ def random_strain(mutant, debug=False):
     """ Apply random strain tensor to unit cell from 6 \epsilon_i components
     with values between -1 and 1. The cell is then scaled to the parent's volume.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place.
+        mutant (dict): structure to mutate in-place.
 
     """
     def generate_cell_transform_matrix():
@@ -265,13 +265,13 @@ def random_strain(mutant, debug=False):
 def nudge_positions(mutant, amplitude=0.5, debug=False):
     """ Apply Gaussian noise to all atomic positions.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place.
+        mutant (dict): structure to mutate in-place.
 
-    Args:
+    Keyword Arguments:
 
-        | amplitude: float, amplitude of random noise in Angstroms.
+        amplitude (float): amplitude of random noise in Angstroms.
 
     """
     new_positions_frac = np.array(mutant['positions_frac'])
@@ -290,9 +290,9 @@ def null_nudge_positions(mutant, debug=False):
     """ Apply minimal Gaussian noise to all atomic positions, mostly
     for testing purposes.
 
-    Input:
+    Parameters:
 
-        | mutant: dict, structure to mutate in-place.
+        mutant (dict): structure to mutate in-place.
 
     """
     nudge_positions(mutant, amplitude=0.001)

@@ -35,9 +35,13 @@ class FakeFullRelaxer(FullRelaxer):
 def strip_useless(doc):
     """ Strip useless information from a matador doc.
 
-    Input:
+    Parameters:
 
-        | doc: dict, structure to strip information from.
+        doc (dict): structure to strip information from.
+
+    Returns:
+
+        dict: matador document stripped of useless keys
 
     """
     stripped_doc = dict()

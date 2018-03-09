@@ -3,33 +3,28 @@ is used to store each generation of structures, and to
 evaulate their fitness.
 """
 
-# matador modules
+import json
 from matador.utils.chem_utils import get_formula_from_stoich
 from matador.similarity.pdf_similarity import PDF
-# external libraries
-# standard library
-import json
 
 
-class Generation():
+class Generation:
     """ Stores each generation of structures.
 
-    Input:
+    Parameters:
 
-        | run_hash           : str, hash for this GA run,
-        | generation_idx     : int, index of this generation,
-        | num_survivors      : int, number of structures to aim for per
-                               generation,
-        | num_accepted       : int, number to accept from this generation, i.e.
-                               excluding elites,
+        run_hash (str)       : hash for this GA run,
+        generation_idx (int) : index of this generation,
+        num_survivors (int)  : number of structures to aim for per
+                                 generation,
+        num_accepted (int)   : number to accept from this generation, i.e.
+                                 excluding elites,
 
-    Args:
+    Keyword Arguments:
 
-        | populace           : list(dict), initial structures to populate
-                               generation with (optional),
-        | dumpfile           : str, dumpfile name for this generation
-                               (optional),
-        | fitness_calculator : str, fitness metric to use, e.g. 'hull'.
+        populace list(dict)      : initial structures to populate generation with (optional)
+        dumpfile (str)           : dumpfile name for this generation (optional)
+        fitness_calculator (str) : fitness metric to use, e.g. 'hull'.
 
     """
 
@@ -94,9 +89,9 @@ class Generation():
     def dump(self, gen_suffix):
         """ Dump the current generation to JSON file.
 
-        Input:
+        Parameters:
 
-            | gen_suffix: str, typically gen<gen_number>.
+            gen_suffix (str): typically gen<gen_number>.
 
         """
         with open('{}-gen{}.json'.format(self.run_hash, gen_suffix), 'w') as f:
@@ -105,9 +100,9 @@ class Generation():
     def dump_bourgeoisie(self, gen_suffix):
         """ Dump the current generation's bourgeoisie to JSON file.
 
-        Input:
+        Parameters:
 
-            | gen_suffix: str, typically gen<gen_number>.
+            gen_suffix (str) : typically gen<gen_number>.
 
         """
         with open('{}-gen{}-bourgeoisie.json'.format(self.run_hash, gen_suffix), 'w') as f:
@@ -116,9 +111,9 @@ class Generation():
     def load(self, gen_fname):
         """ Load populace of the generation from a JSON dump.
 
-        Input:
+        Parameters:
 
-            | gen_fname: str, filename to load.
+            gen_fname (str) : filename to load.
 
         """
         with open(gen_fname, mode='r') as f:
@@ -127,9 +122,9 @@ class Generation():
     def load_bourgeoisie(self, bourge_fname):
         """ Load bourgeoisie of the generation from a JSON dump.
 
-        Input:
+        Parameters:
 
-            | bourge_fname: str, filename to load.
+            bourge_fname (str) : filename to load.
 
         """
         with open(bourge_fname, mode='r') as f:
@@ -138,9 +133,9 @@ class Generation():
     def birth(self, populum):
         """ Add a structure to the populace.
 
-        Input:
+        Parameters:
 
-            | populum: dict, structure to add.
+            populum (dict) : structure to add.
 
         """
         self.populace.append(populum)
@@ -154,7 +149,7 @@ class Generation():
 
         Returns:
 
-            | num_removed: int, number of pathological structures removed.
+            num_removed (int) : number of pathological structures removed.
 
         """
         init_len = len(self.populace)
@@ -167,12 +162,12 @@ class Generation():
         """ Set the structures that will continue to the next generation,
         i.e. the bourgeoisie.
 
-        Args:
+        Keyword Arguments:
 
-            | elites            : list(dict), list of elite structures to
-                                  include from the previous generation,
-            | best_from_stoich  : bool, whether to include one structure from
-                                  each stoichiometry.
+            elites list(dict)       : list of elite structures to
+                                        include from the previous generation,
+            best_from_stoich (bool) : whether to include one structure from
+                                        each stoichiometry.
 
         """
 
@@ -213,14 +208,14 @@ class Generation():
     def is_dupe(self, doc, sim_tol=5e-2, extra_pdfs=None):
         """ Compare doc with all other structures at same stoichiometry via PDF overlap.
 
-        Input:
+        Parameters:
 
-            | doc: dict, structure to compare.
+            doc (dict) : structure to compare.
 
-        Args:
+        Keyword Arguments:
 
-            | sim_tol   : float, similarity tolerance to compare to
-            | extra_pdfs: list(PDF), list of extra pdfs to compare against
+            sim_tol (float)        : similarity tolerance to compare to
+            extra_pdfs (list(PDF)) : list of extra pdfs to compare against
 
         """
         new_pdf = PDF(doc, projected=True)

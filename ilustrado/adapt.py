@@ -1,14 +1,14 @@
 # coding: utf-8
 """ This file contains a wrapper for mutation and crossover. """
+from itertools import product
+from traceback import print_exc
+import logging
+import numpy as np
+from scipy.spatial.distance import cdist
+from matador.utils.cell_utils import cart2volume, frac2cart, cart2abc
 from .mutate import mutate
 from .crossover import crossover
 from .util import strip_useless
-from matador.utils.cell_utils import cart2volume, frac2cart, cart2abc
-from scipy.spatial.distance import cdist
-from itertools import product
-from traceback import print_exc
-import numpy as np
-import logging
 
 
 def adapt(possible_parents, mutation_rate, crossover_rate,
@@ -18,24 +18,24 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     """ Take a list of possible parents and randomly adapt
     according to given mutation weightings.
 
-    Input:
+    Parameters:
 
-        | possible_parents  : list(dict), list of all breeding stock,
-        | mutation_rate     : float, rate of mutations relative to crossover,
-        | crossover_rate    : float, see above.
+        possible_parents (list(dict)) : list of all breeding stock,
+        mutation_rate (float)         : rate of mutations relative to crossover,
+        crossover_rate (float)        : see above.
 
-    Args:
+    Keyword Arguments:
 
-        | mutations         : list(str), list of desired mutations to choose from (as strings),
-        | max_num_mutations : int, rand(1, this) mutations will be performed,
-        | max_num_atoms     : int, any structures with more than this many atoms will be filtered out.
-        | structure_filter  : fn(doc), custom filter to pass to check_feasible.
-        | minsep_dict       : dict, dictionary containing element-specific minimum separations, e.g.
-                              {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+        mutations (list(str))       : list of desired mutations to choose from (as strings),
+        max_num_mutations (int)     : rand(1, this) mutations will be performed,
+        max_num_atoms (int)         : any structures with more than this many atoms will be filtered out.
+        structure_filter (fn(dict)) : custom filter to pass to check_feasible.
+        minsep_dict (dict)          : dictionary containing element-specific minimum separations, e.g.
+                                      {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
     Returns:
 
-        | newborn           : the mutated/newborn structure.
+        dict: the mutated/newborn structure.
 
     """
     total_rate = mutation_rate + crossover_rate
@@ -53,17 +53,17 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         from .mutate import nudge_positions, null_nudge_positions, permute_atoms
         from .mutate import random_strain, vacancy, voronoi_shuffle
         for mutation in mutations:
-            if mutation is 'nudge_positions':
+            if mutation == 'nudge_positions':
                 _mutations.append(nudge_positions)
-            elif mutation is 'null_nudge_positions':
+            elif mutation == 'null_nudge_positions':
                 _mutations.append(null_nudge_positions)
-            elif mutation is 'permute_atoms':
+            elif mutation == 'permute_atoms':
                 _mutations.append(permute_atoms)
-            elif mutation is 'random_strain':
+            elif mutation == 'random_strain':
                 _mutations.append(random_strain)
-            elif mutation is 'voronoi':
+            elif mutation == 'voronoi':
                 _mutations.append(voronoi_shuffle)
-            elif mutation is 'vacancy':
+            elif mutation == 'vacancy':
                 _mutations.append(vacancy)
     else:
         _mutations = None
@@ -135,22 +135,22 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep
         * ensure number of atomic types is maintained,
         * any custom filter is obeyed.
 
-    Input:
+    Parameters:
 
-        | mutant        : dict, matador doc containing new structure.
-        | parents       : list(dict), list of doc(s) containing parent structures.
-        | max_num_atoms : int, any structures with more than this many atoms will be filtered out.
+        mutant (dict)        : matador doc containing new structure.
+        parents (list(dict)) : list of doc(s) containing parent structures.
+        max_num_atoms (int)  : any structures with more than this many atoms will be filtered out.
 
-    Args:
+    Keyword Arguments:
 
-        | structure_filter : fn, any function that takes a matador document and returns True or False.
-        | minsep_dict       : dict, dictionary containing element-specific minimum separations, e.g.
-                              {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+        structure_filter (fn) : any function that takes a matador document and returns True or False.
+        minsep_dict (dict)    : dictionary containing element-specific minimum separations, e.g.
+                                {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
 
     Returns:
 
-        | feasibility : bool, determined by points above.
+        bool: True if structure is feasible, else False.
 
     """
     # first check the structure filter
@@ -161,10 +161,11 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep
             print(message)
         return False
     # check number of atoms
-    if 'num_atoms' not in mutant or 'num_atoms' != len(mutant['atom_types']):
+    if 'num_atoms' not in mutant or mutant['num_atoms'] != len(mutant['atom_types']):
         mutant['num_atoms'] = len(mutant['atom_types'])
     if mutant['num_atoms'] > max_num_atoms:
-        message = 'Mutant with {} contained too many atoms ({} vs {}).'.format(', '.join(mutant['mutations']), mutant['num_atoms'], max_num_atoms)
+        message = ('Mutant with {} contained too many atoms ({} vs {}).'
+                   .format(', '.join(mutant['mutations']), mutant['num_atoms'], max_num_atoms))
         logging.debug(message)
         if debug:
             print(message)
@@ -216,15 +217,15 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep
 def minseps_feasible(mutant, minsep_dict=None, debug=False):
     """ Check if minimum separations between species of atom are satisfied by mutant.
 
-    Input:
+    Parameters:
 
-        | mutant      : dict, trial mutated structure
-        | minsep_dict : dict, dictionary containing element-specific minimum separations, e.g.
-                        {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+        mutant (dict)      : trial mutated structure
+        minsep_dict (dict) : dictionary containing element-specific minimum separations, e.g.
+                             {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
     Returns:
 
-        | True if minseps are greater than desired value else False.
+        bool: True if minseps are greater than desired value else False.
 
     """
     elems = set(mutant['atom_types'])
@@ -249,7 +250,7 @@ def minseps_feasible(mutant, minsep_dict=None, debug=False):
     import periodictable
     for elem_key in elem_pairs:
         if elem_key not in minsep_dict:
-                minsep_dict[elem_key] = sum([periodictable.elements.symbol(elem).covalent_radius for elem in elem_key]) / 2.0
+            minsep_dict[elem_key] = sum([periodictable.elements.symbol(elem).covalent_radius for elem in elem_key]) / 2.
 
     if 'positions_abs' not in mutant:
         mutant['positions_abs'] = frac2cart(mutant['lattice_cart'], mutant['positions_frac'])
@@ -261,10 +262,10 @@ def minseps_feasible(mutant, minsep_dict=None, debug=False):
             trans += np.asarray(mutant['lattice_cart'][ind]) * multi
         distances = cdist(poscart+trans, poscart)
         distances = np.ma.masked_where(distances < 1e-12, distances)
-        for i in range(len(distances)):
-            for j in range(len(distances[i])):
+        for i, dists in enumerate(distances):
+            for j, dist in enumerate(dists):
                 min_dist = minsep_dict[tuple(sorted([mutant['atom_types'][i], mutant['atom_types'][j]]))]
-                if distances[i][j] < min_dist:
+                if dist < min_dist:
                     message = 'Mutant with {} failed minsep check.'.format(', '.join(mutant['mutations']))
                     logging.debug(message)
                     return False

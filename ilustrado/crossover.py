@@ -1,29 +1,27 @@
 # coding: utf-8
 """ This file implements crossover functionality. """
+from copy import deepcopy
 import numpy as np
 from matador.utils.chem_utils import get_stoich
 from matador.utils.cell_utils import create_simple_supercell, standardize_doc_cell
-from copy import deepcopy
 
 
 def crossover(parents, method='random_slice', debug=False):
     """ Attempt to create a child structure from two parents structures.
 
-    Input:
+    Parameters:
 
-        | parents: list(dict), list of two parent structures,
-        | method : str, currently only 'random_slice'.
+        parents (list(dict)) : list of two parent structures
+        method (str)         : currently only 'random_slice'
 
     Returns:
 
-        | newborn: dict, newborn structure from parents.
+        dict : newborn structure from parents.
 
     """
 
-    if method is 'random_slice':
+    if method == 'random_slice':
         _crossover = random_slice
-    elif method is 'periodic_cut':
-        _crossover = periodic_cut
 
     return _crossover(parents, debug=debug)
 
@@ -35,16 +33,16 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
     parent structures. Both parent structures are cut and spliced along the
     same crystallographic axis.
 
-    Input:
+    Parameters:
 
-        | parents         : list(dict), parent structures to crossover,
-        | standardize     : bool, use spglib to standardize parents pre-crossover,
-        | supercell       : bool, make a random supercell to rescale parents,
-        | shift           : bool, randomly shift atoms in parents to unbias.
+        parents (list(dict)) : parent structures to crossover,
+        standardize (bool)   : use spglib to standardize parents pre-crossover,
+        supercell (bool)     : make a random supercell to rescale parents,
+        shift (bool)         : randomly shift atoms in parents to unbias.
 
     Returns:
 
-        | child           : dict, newborn structure from parents.
+        dict: newborn structure from parents.
 
     """
     parents = deepcopy(parent_seeds)
@@ -61,8 +59,8 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
 
     if supercell:
         # check ratio of num atoms in parents and grow the smaller one
-        parent_extent_ratio = (parents[0]['cell_volume']
-                               / parents[1]['cell_volume'])
+        parent_extent_ratio = (parents[0]['cell_volume'] /
+                               parents[1]['cell_volume'])
         if debug:
             print(parent_extent_ratio, parents[0]['cell_volume'],
                   'vs', parents[1]['cell_volume'])
@@ -76,7 +74,7 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
             print(supercell_target, supercell_factor)
         supercell_vector = [1, 1, 1]
         if supercell_factor > 1:
-            for i in range(supercell_factor):
+            for ind in range(supercell_factor):
                 min_lat_vec_abs = 1e10
                 min_lat_vec_ind = -1
                 for i in range(3):
@@ -94,8 +92,8 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
                                                                 standardize=False)
     child['positions_frac'] = []
     child['atom_types'] = []
-    child['lattice_cart'] = (cut_val * np.asarray(parents[0]['lattice_cart'])
-                             + (child_size-cut_val) * np.asarray(parents[1]['lattice_cart']))
+    child['lattice_cart'] = (cut_val * np.asarray(parents[0]['lattice_cart']) +
+                             (child_size-cut_val) * np.asarray(parents[1]['lattice_cart']))
     child['lattice_cart'] = child['lattice_cart'].tolist()
 
     # choose slice axis
@@ -120,11 +118,4 @@ def random_slice(parent_seeds, standardize=True, supercell=True, shift=True, deb
     child['mutations'] = ['crossover']
     child['stoichiometry'] = get_stoich(child['atom_types'])
     child['num_atoms'] = len(child['atom_types'])
-    return child
-
-
-def periodic_cut(parents):
-    """ Periodic cut a la CASTEP/Abraham & Probert. """
-    child = dict()
-    raise NotImplementedError
     return child
