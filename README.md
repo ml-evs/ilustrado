@@ -7,11 +7,11 @@
 The API is [fully-documented](http://www.tcm.phy.cam.ac.uk/~me388/ilustrado) and the source code can be found on [BitBucket](https://bitbucket.org/me388/ilustrado). `ilustrado` makes extensive use of the [matador](https://tcm.phy.cam.ac.uk/~me388/matador) API and interfaces with [CASTEP](http://www.castep.org/) for DFT-level relaxations. Written by [Matthew Evans](http://www.tcm.phy.cam.ac.uk/~me388) (me388@cam.ac.uk).
 
 By default, fitnesses are evaluated as the distance from a binary or ternary convex hull that is passed as input. Duplicate structures are filtered out post-relaxation based on pair distribution function overlap. The standard mutation operators are implemented: cell and position noise, vacancies, and atom permutation and transmutation. Additionally a Voronoi-based mutation has been implemented:
-1. Each of the $N$ atoms of randomly chosen species $\mathrm{A}$ are removed from the cell.
+1. Each of the *N* atoms of randomly chosen species **A** are removed from the cell.
 2. The Voronoi decomposition of the remaining atoms is calculated.
-3. $K$-means clustering is applied to the Voronoi points to split them into $N\pm\Delta$ clusters, where $\Delta$ is a random integer less than $\sqrt(N)$.
-4. $N\pm\Delta$ atoms of species $\mathrm{A}$ are added to the cell at the centres of these clusters.
-This mutation is effective when studying materials that have one light, mobile element, for example Li. The species $\mathrm{A}$ can be specified by the user or chosen randomly.
+3. K-means clustering is applied to the Voronoi points to split them into *N +/- D* clusters, where *D* is a random integer less than *sqrt(N)*.
+4. *N +/- D* atoms of species **A** are added to the cell at the centres of these clusters.
+The species **A** can be specified by the user or chosen randomly. This mutation is effective when studying materials that have one light, mobile element, for example Li. 
 
 Crossover is performed with the standard cut-and-splice method [1] to ensure transferrability over many types of material systems. This method cuts a random fraction from each parent cell and splices them back together; in `ilustrado` efforts are made to align the cells such that the cutting axes are approximately commensurate before crossover.
 
