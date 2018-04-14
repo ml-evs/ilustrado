@@ -76,32 +76,32 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     while not valid_cell and num_iter < max_restarts:
         # if random number is less than mutant rate, then mutate
         if mutation_rand_seed < mutation_rate:
-            parent = strip_useless(np.random.choice(possible_parents))
+            parent = strip_useless(np.random.choice(possible_parents), to_run=True)
             try:
                 newborn = mutate(parent,
                                  mutations=_mutations,
                                  max_num_mutations=max_num_mutations,
                                  debug=debug)
                 parents = [parent]
+                valid_cell = check_feasible(newborn, parents, max_num_atoms,
+                                            structure_filter=structure_filter, minsep_dict=minsep_dict)
             except Exception as oops:
                 if debug:
                     print_exc()
                 logging.warning('Mutation failed with error {}'.format(oops))
                 valid_cell = False
-            valid_cell = check_feasible(newborn, parents, max_num_atoms,
-                                        structure_filter=structure_filter, minsep_dict=minsep_dict)
         # otherwise, do crossover
         else:
-            parents = [strip_useless(parent) for parent in np.random.choice(possible_parents, size=2, replace=False)]
+            parents = [strip_useless(parent, to_run=True) for parent in np.random.choice(possible_parents, size=2, replace=False)]
             try:
                 newborn = crossover(parents, debug=debug)
+                valid_cell = check_feasible(newborn, parents, max_num_atoms,
+                                            structure_filter=structure_filter, minsep_dict=minsep_dict)
             except Exception as oops:
                 if debug:
                     print_exc()
                 logging.warning('Crossover failed with error {}'.format(oops))
                 valid_cell = False
-            valid_cell = check_feasible(newborn, parents, max_num_atoms,
-                                        structure_filter=structure_filter, minsep_dict=minsep_dict)
         num_iter += 1
 
     logging.info('Initialised newborn after {} trials'.format(num_iter))
@@ -116,9 +116,9 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         newborn['parents'] = []
         for parent in parents:
             for source in parent['source']:
-                if '-GA-' in source or source.endswith('.res') or source.endswith('.castep'):
+                if '-GA-' in source or source.endswith('.res') or source.endswith('.castep') or source.endswith('.history'):
                     parent_source = source.split('/')[-1] \
-                                          .replace('.res', '').replace('.castep', '')
+                                          .replace('.res', '').replace('.castep', '').replace('.history', '')
             newborn['parents'].append(parent_source)
     return newborn
 

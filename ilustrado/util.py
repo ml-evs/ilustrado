@@ -32,12 +32,17 @@ class FakeFullRelaxer(FullRelaxer):
         output_queue.put(self.structure)
 
 
-def strip_useless(doc):
+def strip_useless(doc, to_run=False):
     """ Strip useless information from a matador doc.
 
     Parameters:
 
         doc (dict): structure to strip information from.
+
+    Arguments:
+
+        to_run (bool): whether the structure needs to be rerun,
+                       i.e. whether to delete data from previous run.
 
     Returns:
 
@@ -45,13 +50,20 @@ def strip_useless(doc):
 
     """
     stripped_doc = dict()
-    keys = ['source', 'parents', 'mutations',
-            'elems', 'stoichiometry',
-            'lattice_abc', 'lattice_cart', 'cell_volume', 'space_group',
-            'positions_frac', 'num_atoms', 'atom_types',
-            'enthalpy', 'enthalpy_per_atom', 'total_energy', 'total_energy_per_atom',
-            'pressure', 'max_force_on_atom', 'optimised',
-            'date', 'total_time_hrs', 'peak_mem_MB']
+    if to_run:
+        keys = ['source', 'parents', 'mutations',
+                'elems', 'stoichiometry',
+                'lattice_abc', 'lattice_cart',
+                'positions_frac', 'num_atoms', 'atom_types']
+    else:
+        keys = ['source', 'parents', 'mutations',
+                'elems', 'stoichiometry',
+                'lattice_abc', 'lattice_cart', 'cell_volume', 'space_group',
+                'positions_frac', 'num_atoms', 'atom_types',
+                'enthalpy', 'enthalpy_per_atom', 'total_energy', 'total_energy_per_atom',
+                'pressure', 'max_force_on_atom', 'optimised',
+                'date', 'total_time_hrs', 'peak_mem_MB']
+
     for key in keys:
         if key in doc:
             stripped_doc[key] = doc[key]
