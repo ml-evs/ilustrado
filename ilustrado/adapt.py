@@ -1,11 +1,15 @@
 # coding: utf-8
 """ This file contains a wrapper for mutation and crossover. """
+
 from itertools import product
 from traceback import print_exc
 import logging
+
 import numpy as np
 from scipy.spatial.distance import cdist
+
 from matador.utils.cell_utils import cart2volume, frac2cart, cart2abc
+
 from .mutate import mutate
 from .crossover import crossover
 from .util import strip_useless
@@ -19,13 +23,11 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     according to given mutation weightings.
 
     Parameters:
-
         possible_parents (list(dict)) : list of all breeding stock,
         mutation_rate (float)         : rate of mutations relative to crossover,
         crossover_rate (float)        : see above.
 
     Keyword Arguments:
-
         mutations (list(str))       : list of desired mutations to choose from (as strings),
         max_num_mutations (int)     : rand(1, this) mutations will be performed,
         max_num_atoms (int)         : any structures with more than this many atoms will be filtered out.
@@ -34,7 +36,6 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                                       {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
     Returns:
-
         dict: the mutated/newborn structure.
 
     """
@@ -51,7 +52,7 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
     if mutations is not None:
         _mutations = []
         from .mutate import nudge_positions, null_nudge_positions, permute_atoms
-        from .mutate import random_strain, vacancy, voronoi_shuffle
+        from .mutate import random_strain, vacancy, voronoi_shuffle, transmute_atoms
         for mutation in mutations:
             if mutation == 'nudge_positions':
                 _mutations.append(nudge_positions)
@@ -65,6 +66,8 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                 _mutations.append(voronoi_shuffle)
             elif mutation == 'vacancy':
                 _mutations.append(vacancy)
+            elif mutation == 'transmute_atoms':
+                _mutations.append(transmute_atoms)
     else:
         _mutations = None
 
@@ -84,7 +87,8 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                                  debug=debug)
                 parents = [parent]
                 valid_cell = check_feasible(newborn, parents, max_num_atoms,
-                                            structure_filter=structure_filter, minsep_dict=minsep_dict)
+                                            structure_filter=structure_filter,
+                                            minsep_dict=minsep_dict)
             except Exception as oops:
                 if debug:
                     print_exc()
@@ -92,7 +96,9 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
                 valid_cell = False
         # otherwise, do crossover
         else:
-            parents = [strip_useless(parent, to_run=True) for parent in np.random.choice(possible_parents, size=2, replace=False)]
+            parents = [strip_useless(parent, to_run=True)
+                       for parent in np.random.choice(possible_parents,
+                                                      size=2, replace=False)]
             try:
                 newborn = crossover(parents, debug=debug)
                 valid_cell = check_feasible(newborn, parents, max_num_atoms,
@@ -116,9 +122,12 @@ def adapt(possible_parents, mutation_rate, crossover_rate,
         newborn['parents'] = []
         for parent in parents:
             for source in parent['source']:
-                if '-GA-' in source or source.endswith('.res') or source.endswith('.castep') or source.endswith('.history'):
-                    parent_source = source.split('/')[-1] \
-                                          .replace('.res', '').replace('.castep', '').replace('.history', '')
+                if ('-GA-' in source or source.endswith('.res') or
+                        source.endswith('.castep') or source.endswith('.history')):
+                    parent_source = source.split('/')[-1]\
+                                          .replace('.res', '')\
+                                          .replace('.castep', '')\
+                                          .replace('.history', '')
             newborn['parents'].append(parent_source)
     return newborn
 
@@ -127,7 +136,6 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep
     """ Check if a mutated/newly-born cell is "feasible".
 
     Here, feasible means:
-
         * number density within 25% of pre-mutation/birth level,
         * no overlapping atoms, parameterised by minsep_dict,
         * cell angles between 50 and 130 degrees,
@@ -136,20 +144,17 @@ def check_feasible(mutant, parents, max_num_atoms, structure_filter=None, minsep
         * any custom filter is obeyed.
 
     Parameters:
-
         mutant (dict)        : matador doc containing new structure.
         parents (list(dict)) : list of doc(s) containing parent structures.
         max_num_atoms (int)  : any structures with more than this many atoms will be filtered out.
 
     Keyword Arguments:
-
         structure_filter (fn) : any function that takes a matador document and returns True or False.
         minsep_dict (dict)    : dictionary containing element-specific minimum separations, e.g.
-                                {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+            {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
 
     Returns:
-
         bool: True if structure is feasible, else False.
 
     """
@@ -218,13 +223,11 @@ def minseps_feasible(mutant, minsep_dict=None, debug=False):
     """ Check if minimum separations between species of atom are satisfied by mutant.
 
     Parameters:
-
         mutant (dict)      : trial mutated structure
         minsep_dict (dict) : dictionary containing element-specific minimum separations, e.g.
-                             {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
+            {('K', 'K'): 2.5, ('K', 'P'): 2.0}.
 
     Returns:
-
         bool: True if minseps are greater than desired value else False.
 
     """
