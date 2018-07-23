@@ -20,15 +20,15 @@ setup(name='ilustrado',
       install_requires=[
           'numpy>=1.10',
           'scipy>=0.18',
-          # 'matador', requires a local install of matador
+          'matador',
           'scikit-learn>=0.18',
           'periodictable>=1.4',
           'matplotlib>=1.5',
           'seaborn'
       ],
+      dependency_links=["https://bitbucket.org/ml-evs/matador/get/master.tar.bz2"],
       extras_require={
-          'matador': ['matador'],
           'voronoi': ['ajm_group_voronoi_code'],
-          'docs': ['sphinx', 'sphinx_rtd_theme', 'm2r', 'sphinxcontrib-napoleon'],
+          'docs': ['sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-napoleon', 'sphinx-argparse', 'm2r'],
       },
       zip_safe=False)

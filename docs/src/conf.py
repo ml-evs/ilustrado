@@ -33,11 +33,18 @@ sys.path.insert(0, os.path.abspath('..'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.intersphinx',
+              'sphinx.ext.todo',
+              'sphinxarg.ext',
               'm2r',
+              'sphinx.ext.mathjax',
               'sphinxcontrib.napoleon']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+
+autodoc_member_order = 'bysource'
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
@@ -81,22 +88,22 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-# -- Napolean options -----------------------------------------------------
+# run apidoc automatically on RTD: https://github.com/rtfd/readthedocs.org/issues/1139
+def run_apidoc(_):
+    import subprocess
+    import glob
+    src_dir = os.path.abspath(os.path.dirname(__file__))
+    excludes = []
+    # excludes = glob.glob(os.path.join(src_dir, '../../ilustrado/tests/'))
+    module = os.path.join(src_dir, '../../ilustrado')
+    cmd_path = 'sphinx-apidoc'
+    print(excludes)
+    command = [cmd_path, '-M', '-o', src_dir, module, ' '.join(excludes)]
+    print(command)
+    subprocess.check_call(command)
 
-# Napoleon settings
-#
-napoleon_google_docstring = True
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = False
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = False
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = False
-napoleon_use_admonition_for_references = False
-napoleon_use_ivar = False
-napoleon_use_param = False
-napoleon_use_rtype = False
-napoleon_use_keyword = False
+def setup(app):
+    app.connect('builder-inited', run_apidoc)
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -116,7 +123,6 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
 
 
 # -- Options for HTMLHelp output ------------------------------------------
@@ -162,6 +168,13 @@ man_pages = [
     (master_doc, 'ilustrado', 'ilustrado Documentation',
      [author], 1)
 ]
+
+intersphinx_mapping = intersphinx_mapping = {'python': ('https://docs.python.org/3.6', None),
+                                             'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                                             'pymongo': ('https://api.mongodb.com/python/current/', None),
+                                             'matador': ('https://matador-db.readthedocs.io/en/latest/', None),
+                                             'np': ('http://docs.scipy.org/doc/numpy/', None),
+                                             'matplotlib': ('http://matplotlib.org', None)}
 
 
 # -- Options for Texinfo output -------------------------------------------
