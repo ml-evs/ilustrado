@@ -11,7 +11,7 @@ except:
 setup(name='ilustrado',
       version=__version__,
       description='Simple genetic algorithm for crystal structure prediction.',
-      long_description=open('README.md').read(),
+      long_description=open('README.rst').read(),
       author='Matthew Evans',
       author_email='me388@cam.ac.uk',
       license='MIT',
