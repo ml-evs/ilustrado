@@ -9,12 +9,6 @@ try:
 except:
     __version__ = 'xxx'
 
-
-os.system('git clone https://bitbucket.org/ml-evs/matador.git')
-os.chdir('matador')
-os.system('pip install .')
-os.chdir('..')
-
 setup(name='ilustrado',
       version=__version__,
       description='Simple genetic algorithm for crystal structure prediction.',
