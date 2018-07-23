@@ -22,6 +22,7 @@ import sys
 import sphinx_rtd_theme
 
 sys.path.append(os.path.abspath('../../matador'))
+sys.path.append(os.path.abspath('../../matador/plugins'))
 
 
 # -- General configuration ------------------------------------------------
