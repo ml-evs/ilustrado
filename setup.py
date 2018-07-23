@@ -9,6 +9,14 @@ try:
 except:
     __version__ = 'xxx'
 
+with open('requirements/requirements.txt', 'r') as f:
+    requirements = [line.strip() for line in f.readlines()]
+
+extra_requirements = dict()
+for subreq in ['docs', 'voronoi']:
+    with open('requirements/{}_requirements.txt'.format(subreq), 'r') as f:
+        extra_requirements[subreq] = [line.strip() for line in f.readlines()]
+
 setup(name='ilustrado',
       version=__version__,
       description='Simple genetic algorithm for crystal structure prediction.',
@@ -18,16 +26,6 @@ setup(name='ilustrado',
       license='MIT',
       packages=find_packages(),
       test_suite='ilustrado.tests',
-      install_requires=[
-          'numpy>=1.10',
-          'scipy>=0.18',
-          'scikit-learn>=0.18',
-          'periodictable>=1.4',
-          'matplotlib>=1.5',
-          'seaborn'
-      ],
-      extras_require={
-          'voronoi': ['ajm_group_voronoi_code'],
-          'docs': ['sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-napoleon', 'sphinx-argparse'],
-      },
+      install_requires=requirements,
+      extras_require=extra_requirements,
       zip_safe=False)
