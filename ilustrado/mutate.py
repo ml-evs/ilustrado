@@ -12,7 +12,7 @@ from sklearn.cluster import KMeans
 
 from matador.utils.cell_utils import cart2abc
 from matador.utils.chem_utils import get_stoich
-from matador.voronoi_interface import get_voronoi_points
+from matador.plugins.voronoi_interface.voronoi_interface import get_voronoi_points
 
 
 def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
