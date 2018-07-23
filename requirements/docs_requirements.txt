@@ -2,3 +2,5 @@ sphinx
 sphinx_rtd_theme
 sphinxcontrib-napoleon
 sphinx-argparse
+# some weird matador thing that keeps failing
+pymongo
