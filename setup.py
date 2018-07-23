@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 from subprocess import check_output
+import os
 
 try:
     __version__ = check_output(["git", "describe", "--tags"]).decode("utf-8").strip()
@@ -7,6 +8,12 @@ try:
                           .decode('utf-8').strip())
 except:
     __version__ = 'xxx'
+
+
+os.system('git clone https://bitbucket.org/ml-evs/matador.git')
+os.chdir('matador')
+os.system('pip install .')
+os.chdir('..')
 
 setup(name='ilustrado',
       version=__version__,
@@ -20,13 +27,11 @@ setup(name='ilustrado',
       install_requires=[
           'numpy>=1.10',
           'scipy>=0.18',
-          'matador',
           'scikit-learn>=0.18',
           'periodictable>=1.4',
           'matplotlib>=1.5',
           'seaborn'
       ],
-      dependency_links=["https://bitbucket.org/ml-evs/matador/get/master.tar.bz2"],
       extras_require={
           'voronoi': ['ajm_group_voronoi_code'],
           'docs': ['sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-napoleon', 'sphinx-argparse'],
