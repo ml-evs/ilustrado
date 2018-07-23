@@ -37,7 +37,6 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.intersphinx',
               'sphinx.ext.todo',
               'sphinxarg.ext',
-              'm2r',
               'sphinx.ext.mathjax',
               'sphinxcontrib.napoleon']
 

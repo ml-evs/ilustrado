@@ -29,6 +29,6 @@ setup(name='ilustrado',
       dependency_links=["https://bitbucket.org/ml-evs/matador/get/master.tar.bz2"],
       extras_require={
           'voronoi': ['ajm_group_voronoi_code'],
-          'docs': ['sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-napoleon', 'sphinx-argparse', 'm2r'],
+          'docs': ['sphinx', 'sphinx_rtd_theme', 'sphinxcontrib-napoleon', 'sphinx-argparse'],
       },
       zip_safe=False)
