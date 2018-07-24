@@ -12,6 +12,9 @@ except:
 with open('requirements/requirements.txt', 'r') as f:
     requirements = [line.strip() for line in f.readlines()]
 
+# have to strip git link for setup.py/pip install
+requirements = [req for req in requirements if not req.startswith('git')]
+
 extra_requirements = dict()
 for subreq in ['docs', 'voronoi']:
     with open('requirements/{}_requirements.txt'.format(subreq), 'r') as f:
