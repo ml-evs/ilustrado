@@ -2,12 +2,3 @@ sphinx
 sphinx_rtd_theme
 sphinxcontrib-napoleon
 sphinx-argparse
-# add matador reqs as some weird rtfd thing keeps failing
-pymongo
-psutil
-numpy>=1.10
-scipy>=1.0
-periodictable
-spglib
-psutil
-pyyaml

@@ -14,7 +14,7 @@ By default, fitnesses are evaluated as the distance from a binary or ternary con
 
 1. Each of the :math:`N` atoms of randomly chosen species **A** are removed from the cell.
 2. The Voronoi decomposition of the remaining atoms is calculated.
-3. K-means clustering is applied to the Voronoi points to split them into :math:`N \pm D` clusters, where :math:`D` is a random integer less than :math:`\sqrt(N)`.
+3. K-means clustering is applied to the Voronoi points to split them into :math:`N \pm D` clusters, where :math:`D` is a random integer less than :math:`\sqrt{(N)}`.
 4. :math:`N \pm D` atoms of species **A** are added to the cell at the centres of these clusters. The species **A** can be specified by the user or chosen randomly. This mutation is effective when studying materials that have one light, mobile element, for example Li. 
    
 
@@ -22,7 +22,7 @@ Crossover is performed with the standard cut-and-splice method [1] to ensure tra
 
 Several physical constraints (minimum atomic separations, densities, cell shapes) are applied to the trial structures before relaxation to improve efficiency. In order to maintain population diversity as the simulation progresses, the user can optionally disfavour frequently-visited regions of composition space.
 
-The entrypoint is a Python script that creates an ` ``ArtificialSelector`` <http://ilustrado.readthedocs.io/en/latest/ilustrado.html#ilustrado.ilustrado.ArtificialSelector>`_ object with the desired parameters. Many examples can be found in ``examples/``. There are two ``compute_mode``s in which to run ``ilustrado``:
+The entrypoint is a Python script that creates an `ArtificialSelector <http://ilustrado.readthedocs.io/en/latest/ilustrado.html#ilustrado.ilustrado.ArtificialSelector>`_ object with the desired parameters. Many examples can be found in ``examples/``. There are two ``compute_mode``s in which to run ``ilustrado``:
 - ``compute_mode='direct'`` involves one ``ilustrado`` processes spawning ``mpirun`` jobs either on local or remote partitions (i.e. either a node list is passed for running on a local cluster, or ``ilustrado`` itself is submitted as a HPC job). In this case, the user must manually restart the GA when the job finishes.
 - ``compute_mode='slurm'`` performs the GA in interruptible steps; submitting ``ilustrado`` as a job will lead to the submission of many slurm array jobs for the relaxation, and a dependency job that re-runs the ``ilustrado`` process to check on the relaxations. In this case, the user only needs to submit one job (tested on 6400 cores/200 nodes without issue).
 

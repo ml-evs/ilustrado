@@ -5,3 +5,4 @@ scikit-learn>=0.18
 periodictable>=1.4
 matplotlib
 seaborn
+git+git//bitbucket.org/ml-evs/matador#egg=matador
