@@ -15,8 +15,8 @@ By default, fitnesses are evaluated as the distance from a binary or ternary con
 1. Each of the :math:`N` atoms of randomly chosen species **A** are removed from the cell.
 2. The Voronoi decomposition of the remaining atoms is calculated.
 3. K-means clustering is applied to the Voronoi points to split them into :math:`N \pm D` clusters, where :math:`D` is a random integer less than :math:`\sqrt{(N)}`.
-4. :math:`N \pm D` atoms of species **A** are added to the cell at the centres of these clusters. The species **A** can be specified by the user or chosen randomly. This mutation is effective when studying materials that have one light, mobile element, for example Li. 
-   
+4. :math:`N \pm D` atoms of species **A** are added to the cell at the centres of these clusters. The species **A** can be specified by the user or chosen randomly. This mutation is effective when studying materials that have one light, mobile element, for example Li.
+
 
 Crossover is performed with the standard cut-and-splice method [1] to ensure transferrability over many types of material systems. This method cuts a random fraction from each parent cell and splices them back together; in ilustrado efforts are made to align the cells such that the cutting axes are approximately commensurate before crossover.
 
