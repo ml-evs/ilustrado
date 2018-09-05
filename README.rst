@@ -40,7 +40,7 @@ New in v0.3b:
 License
 --------
 
-matador is available under the `MIT License <https://bitbucket.org/ml-evs/matador/src/master/LICENSE>_`.
+ilustrado is available under the `MIT License <https://bitbucket.org/ml-evs/ilustrado/src/master/LICENSE>`_.
 
 .. |MIT License| image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://bitbucket.org/ml-evs/ilustrado/src/master/LICENSE
