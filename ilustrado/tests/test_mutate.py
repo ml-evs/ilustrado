@@ -4,22 +4,27 @@ import logging
 from os.path import realpath
 from copy import deepcopy
 from os import chdir
-from ilustrado.mutate import voronoi_shuffle
-from ilustrado.adapt import check_feasible
+from json import load, dumps
+
+import numpy as np
 from matador.export import doc2res
 from matador.utils.chem_utils import get_formula_from_stoich
-from json import load, dumps
-import numpy as np
+
+from ilustrado.mutate import voronoi_shuffle
+from ilustrado.adapt import check_feasible
+
 REAL_PATH = '/'.join(realpath(__file__).split('/')[:-1]) + '/'
 
 
 class MutationTest(unittest.TestCase):
-    """ Tests basic crossover functionality. """
+    """ Tests basic mutation functionality. """
+
+    @unittest.skip
     def testVoronoi(self):
         chdir(REAL_PATH)
         with open('data/jdkay7-gen1.json') as f:
             generation = load(f)
-        print([get_formula_from_stoich(doc['stoichiometry']) for doc in generation])
+
         _iter = 0
         loglevel = 'debug'
         numeric_loglevel = getattr(logging, loglevel.upper(), None)
@@ -33,7 +38,7 @@ class MutationTest(unittest.TestCase):
             print(get_formula_from_stoich(initial_stoich), '---->', get_formula_from_stoich(mutant['stoichiometry']))
             # feasible = check_feasible(mutant, [generation[3]], max_num_atoms=40, debug=True)
             # self.assertTrue(feasible)
-            test_json = dumps(mutant)
+            dumps(mutant)
             _iter += 1
 
 

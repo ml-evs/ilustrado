@@ -1,22 +1,25 @@
 #!/usr/bin/env python
 import unittest
 import logging
+from json import load, dumps
 from os.path import realpath, isfile
 from os import chdir, makedirs
-from ilustrado.crossover import crossover, random_slice
-from ilustrado.adapt import check_feasible
+
+import numpy as np
 from matador.export import doc2res
 from matador.scrapers.castep_scrapers import res2dict
 from matador.utils.cell_utils import create_simple_supercell
-from json import load, dumps
-import numpy as np
-REAL_PATH = '/'.join(realpath(__file__).split('/')[:-1]) + '/'
+
+from ilustrado.crossover import crossover, random_slice
+from ilustrado.adapt import check_feasible
+
+DATA_PATH = '/'.join(realpath(__file__).split('/')[:-1]) + '/'
 
 
 class CrossoverTest(unittest.TestCase):
     """ Tests basic crossover functionality. """
     # def testRandom(self):
-        # chdir(REAL_PATH)
+        # chdir(DATA_PATH)
         # with open('jdkay7-gen7.json') as f:
             # generation = load(f)
         # _iter = 0
@@ -33,12 +36,10 @@ class CrossoverTest(unittest.TestCase):
             # _iter += 1
 
     def testSlice(self):
-        chdir(REAL_PATH)
+        chdir(DATA_PATH)
         if not isfile('crossover'):
             makedirs('crossover', exist_ok=True)
 
-        with open('jdkay7-gen7.json') as f:
-            generation = load(f)
         parents = [res2dict('query-K3P-KP/KP-NaP-CollCode182164.res')[0], res2dict('query-K6P-KP/KP-GA-uynlzz-17x7.res')[0]]
         doc2res(parents[0], 'crossover/parent1', hash_dupe=False, info=False)
         doc2res(parents[1], 'crossover/parent2', hash_dupe=False, info=False)
@@ -46,7 +47,6 @@ class CrossoverTest(unittest.TestCase):
         while _iter < 100:
             child = random_slice(parents, standardize=True, supercell=True, shift=True, debug=True)
             feasible = check_feasible(child, parents, max_num_atoms=50)
-            test_json = dumps(child)
             _iter += 1
             if feasible:
                 doc2res(child, 'crossover/feasible', hash_dupe=True, info=False)
