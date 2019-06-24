@@ -4,32 +4,38 @@ evaulate their fitness.
 """
 
 import json
+
 from matador.utils.chem_utils import get_formula_from_stoich
-from matador.similarity.pdf_similarity import PDF
+from matador.fingerprints.pdf import PDF
 
 
 class Generation:
     """ Stores each generation of structures.
 
     Parameters:
-
-        run_hash (str)       : hash for this GA run,
-        generation_idx (int) : index of this generation,
-        num_survivors (int)  : number of structures to aim for per
-                                 generation,
-        num_accepted (int)   : number to accept from this generation, i.e.
-                                 excluding elites,
+        run_hash (str): hash for this GA run,
+        generation_idx (int): index of this generation,
+        num_survivors (int): number of structures to aim for per generation,
+        num_accepted (int): number to accept from this generation, i.e.
+            excluding elites,
 
     Keyword Arguments:
-
-        populace list(dict)      : initial structures to populate generation with (optional)
-        dumpfile (str)           : dumpfile name for this generation (optional)
-        fitness_calculator (str) : fitness metric to use, e.g. 'hull'.
+        populace (list(dict)): initial structures to populate generation with (optional)
+        dumpfile (str): dumpfile name for this generation (optional)
+        fitness_calculator (str): fitness metric to use, e.g. 'hull'.
 
     """
 
-    def __init__(self, run_hash, generation_idx, num_survivors, num_accepted,
-                 populace=None, dumpfile=None, fitness_calculator=None):
+    def __init__(
+        self,
+        run_hash: str,
+        generation_idx: int,
+        num_survivors: int,
+        num_accepted: int,
+        populace=None,
+        dumpfile=None,
+        fitness_calculator=None
+    ):
 
         self.populace = []
         if populace is not None:
@@ -90,7 +96,6 @@ class Generation:
         """ Dump the current generation to JSON file.
 
         Parameters:
-
             gen_suffix (str): typically gen<gen_number>.
 
         """
@@ -101,7 +106,6 @@ class Generation:
         """ Dump the current generation's bourgeoisie to JSON file.
 
         Parameters:
-
             gen_suffix (str) : typically gen<gen_number>.
 
         """
@@ -112,7 +116,6 @@ class Generation:
         """ Load populace of the generation from a JSON dump.
 
         Parameters:
-
             gen_fname (str) : filename to load.
 
         """
@@ -123,18 +126,16 @@ class Generation:
         """ Load bourgeoisie of the generation from a JSON dump.
 
         Parameters:
-
             bourge_fname (str) : filename to load.
 
         """
         with open(bourge_fname, mode='r') as f:
             self.bourgeoisie = json.load(f)
 
-    def birth(self, populum):
+    def birth(self, populum: dict):
         """ Add a structure to the populace.
 
         Parameters:
-
             populum (dict) : structure to add.
 
         """
@@ -148,7 +149,6 @@ class Generation:
         """ Remove structures with pathological formation enthalpies.
 
         Returns:
-
             num_removed (int) : number of pathological structures removed.
 
         """
@@ -163,11 +163,10 @@ class Generation:
         i.e. the bourgeoisie.
 
         Keyword Arguments:
-
             elites list(dict)       : list of elite structures to
-                                        include from the previous generation,
+                include from the previous generation,
             best_from_stoich (bool) : whether to include one structure from
-                                        each stoichiometry.
+                each stoichiometry.
 
         """
 
@@ -209,13 +208,11 @@ class Generation:
         """ Compare doc with all other structures at same stoichiometry via PDF overlap.
 
         Parameters:
-
-            doc (dict) : structure to compare.
+            doc (dict): structure to compare.
 
         Keyword Arguments:
-
-            sim_tol (float)        : similarity tolerance to compare to
-            extra_pdfs (list(PDF)) : list of extra pdfs to compare against
+            sim_tol (float): similarity tolerance to compare to
+            extra_pdfs (list(PDF)): list of extra pdfs to compare against
 
         """
         new_pdf = PDF(doc, projected=True)

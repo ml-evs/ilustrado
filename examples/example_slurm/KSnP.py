@@ -11,7 +11,7 @@ def main():
     from glob import glob
     from sys import argv
     from matador.hull import QueryConvexHull
-    from matador.similarity.similarity import get_uniq_cursor
+    from matador.fingerprints.similarity import get_uniq_cursor
     from matador.utils.chem_utils import get_formula_from_stoich
     from matador.scrapers.castep_scrapers import res2dict
     from ilustrado.ilustrado import ArtificialSelector

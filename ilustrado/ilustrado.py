@@ -18,8 +18,8 @@ from pkg_resources import require
 # matador modules
 from matador.scrapers.castep_scrapers import res2dict, castep2dict, cell2dict, param2dict
 from matador.export import generate_hash, doc2res
-from matador.similarity.similarity import get_uniq_cursor
-from matador.similarity.pdf_similarity import PDFFactory
+from matador.fingerprints.similarity import get_uniq_cursor
+from matador.fingerprints.pdf import PDFFactory
 from matador.utils.chem_utils import get_formula_from_stoich
 from matador.hull import QueryConvexHull
 # ilustrado modules
@@ -107,7 +107,7 @@ class ArtificialSelector:
             'executable': 'castep', 'max_num_nodes': None, 'walltime_hrs': None, 'slurm_template': None,
             'entrypoint': None,
             # debug and logging parameters
-            'debug': False, 'testing': False, 'verbosity': 0, 'loglevel': 'info'
+            'debug': False, 'testing': False, 'emt': False, 'verbosity': 0, 'loglevel': 'info'
         }
 
         # cache current params to reload again later
@@ -218,7 +218,6 @@ class ArtificialSelector:
                 del self.hull.cursor[ind]['pdf']
         else:
             self.extra_pdfs = None
-        assert self.check_dupes in [0, 1, 2]
         logging.info('Successfully initialised similarity lists.')
 
         if self.recover_from is not None:
@@ -529,16 +528,21 @@ class ArtificialSelector:
                     node = free_nodes.pop()
                     ncores = free_cores.pop()
                     # actually relax structure (or not, if testing is turned on)
-                    if self.testing:
-                        from ilustrado.util import FakeFullRelaxer as FullRelaxer
+                    # TODO: refactor to be more general
+                    if self.emt:
+                        from ilustrado.util import AseRelaxation
+                        relaxer = AseRelaxation(newborns[-1])
                     else:
-                        from matador.compute import FullRelaxer
+                        if self.testing:
+                            from ilustrado.util import FakeFullRelaxer as FullRelaxer
+                        else:
+                            from matador.compute import FullRelaxer
 
-                    relaxer = FullRelaxer(ncores=ncores, nnodes=None, node=node,
-                                          res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
-                                          debug=False, verbosity=self.verbosity, killcheck=True,
-                                          reopt=False, executable=self.executable,
-                                          start=False, **self.relaxer_params)
+                        relaxer = FullRelaxer(ncores=ncores, nnodes=None, node=node,
+                                              res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
+                                              debug=False, verbosity=self.verbosity, killcheck=True,
+                                              reopt=False, executable=self.executable,
+                                              start=False, **self.relaxer_params)
                     queues.append(mp.Queue())
                     # store proc object with structure ID, node name, output queue and number of cores
                     procs.append((newborn_id, node,
@@ -727,15 +731,17 @@ class ArtificialSelector:
                     result['mutations'] = newborns[proc[0]]['mutations']
 
             result = strip_useless(result)
-            dupe = self.is_newborn_dupe(result, extra_pdfs=self.extra_pdfs)
-            if dupe and bool(self.check_dupes):
-                status = 'Duplicate'
-                if proc is not None:
-                    logging.debug('Newborn {} is a duplicate and will not be included.'
-                                  .format(', '.join(newborns[proc[0]]['source'])))
-                with open(self.run_hash+'-dupe.json', 'a') as f:
-                    dump(result, f, sort_keys=False, indent=2)
-            else:
+            dupe = False
+            if self.check_dupes:
+                dupe = self.is_newborn_dupe(result, extra_pdfs=self.extra_pdfs)
+                if dupe:
+                    status = 'Duplicate'
+                    if proc is not None:
+                        logging.debug('Newborn {} is a duplicate and will not be included.'
+                                      .format(', '.join(newborns[proc[0]]['source'])))
+                    with open(self.run_hash+'-dupe.json', 'a') as f:
+                        dump(result, f, sort_keys=False, indent=2)
+            elif not dupe:
                 self.next_gen.birth(result)
                 if proc is not None:
                     logging.info('Newborn {} added to next generation.'
@@ -845,7 +851,6 @@ class ArtificialSelector:
         """ Set up first generation from gene pool.
 
         Parameters:
-
             gene_pool (list(dict)): list of structure with which to seed generation.
 
         """

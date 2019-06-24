@@ -10,17 +10,17 @@ class FitnessCalculator:
     by some global definition of generation-agnostic fitness.
 
     Parameters:
-
-        fitness_metric (str)   : either 'dummy', 'hull' or 'hull_test'.
-        fitness_function (fn)  : function to operate on numpy array of raw fitness values,
-        hull (QueryConvexHull) : matador hull from which to calculate metastability,
-        sandbagging (bool)     : whether or not to "sandbag" particular compositions, i.e. lower
-                                 a structure's fitness based on the number of nearby phases
+        fitness_metric (str): either 'dummy', 'hull' or 'hull_test'.
+        fitness_function (callable): function to operate on numpy array of raw fitness values,
+        hull (QueryConvexHull): matador hull from which to calculate metastability,
+        sandbagging (bool): whether or not to "sandbag" particular compositions, i.e. lower
+            a structure's fitness based on the number of nearby phases
 
     """
     def __init__(self, fitness_metric='dummy', fitness_function=None, hull=None, sandbagging=False, debug=False):
         """ Initialise fitness calculator, if from hull then
         extract chemical potentials.
+
         """
         self.testing = False
         self.debug = debug
@@ -28,16 +28,16 @@ class FitnessCalculator:
         if self.fitness_metric == 'hull':
             self._get_raw = self._get_hull_distance
             if hull is None:
-                raise RuntimeError('Cannot calculate hull distanace without a hull!')
+                raise RuntimeError('Cannot calculate hull distance without a hull!')
             self.hull = hull
-            self.chempots = hull.match
+            self.chempots = hull.chempot_cursor
         elif self.fitness_metric == 'dummy':
             self._get_raw = self._get_dummy_fitness
         elif self.fitness_metric == 'hull_test':
             self.testing = True
             self._get_raw = self._get_hull_distance
             self.hull = hull
-            self.chempots = hull.match
+            self.chempots = hull.chempot_cursor
         else:
             raise RuntimeError('No recognised fitness metric given.')
 
@@ -55,19 +55,17 @@ class FitnessCalculator:
         """ Assign normalised fitnesses to an entire generation.
         Normalisation uses the logistic function such that
 
-        fitness = 1 - tanh(2*distance_from_hull),
+        `fitness = 1 - tanh(2*distance_from_hull)`,
 
         Parameters:
-
-            generation (Generation): list of optimised structures,
-
+            generation (Generation/list): list/iterator over optimised structures,
 
         """
 
         raw = self._get_raw(generation)
         fitnesses = self.fitness_function(raw)
 
-        for ind, populum in enumerate(generation):
+        for ind, _ in enumerate(generation):
             generation[ind]['raw_fitness'] = raw[ind]
             generation[ind]['fitness'] = fitnesses[ind]
 
@@ -81,7 +79,6 @@ class FitnessCalculator:
         and values of fitness penalty.
 
         Parameters:
-
             generation (Generation): list of optimised structures.
 
         """
@@ -97,11 +94,9 @@ class FitnessCalculator:
         in the generation.
 
         Parameters:
-
             generation (Generation): list of optimised structures.
 
         Keyword Arguments:
-
             locality (float): tolerance by which two structures are "nearby"
 
         """
@@ -117,11 +112,9 @@ class FitnessCalculator:
         assigning it.
 
         Parameters:
-
             generation (Generation): list of optimised structures.
 
         Returns:
-
             hull_dist (list(float)): list of distances to the hull.
 
         """
@@ -140,7 +133,7 @@ class FitnessCalculator:
                                 .reshape(len(generation), 1)))
         if self.debug:
             print(structures)
-        hull_dist, _, _ = self.hull.get_hull_distances(structures, precompute=False)
+        hull_dist = self.hull.get_hull_distances(structures, precompute=False)
         for ind, populum in enumerate(generation):
             generation[ind]['hull_distance'] = hull_dist[ind]
         return hull_dist
@@ -149,11 +142,9 @@ class FitnessCalculator:
         """ Generate dummy hull distances from -0.01 to 0.05.
 
         Parameters:
-
             generation (Generation): list of optimised structures.
 
         Returns:
-
             list(float): dummy list of hull distances.
 
         """
@@ -164,11 +155,9 @@ def default_fitness_function(raw, c=50, offset=0.075):
     """ Default fitness function: logistic function.
 
     Parameters:
-
         raw (ndarray): 1D array of raw fitness values.
 
     Returns:
-
         ndarray: 1D array of rescaled fitnesses.
 
     """
