@@ -134,10 +134,13 @@ class ArtificialSelector:
             self.relaxer_params = dict()
         self.next_gen = None
         if isinstance(self.ncores, list):
-            assert len(self.ncores) == len(self.nodes)
+            if len(self.ncores) != len(self.nodes):
+                raise RuntimeError('Length mismatch between ncores and nodes list: {} vs {}'.format(self.ncores, self.nodes))
 
         # set up computing resource
-        assert self.compute_mode in ['slurm', 'direct']
+        if self.compute_mode not in ['slurm', 'direct']:
+            raise RuntimeError('`compute_mode` must be one of `slurm`, `direct`.')
+
         if self.compute_mode is 'slurm':
             assert isinstance(self.walltime_hrs, int)
             assert self.walltime_hrs > 0
@@ -538,16 +541,16 @@ class ArtificialSelector:
                         else:
                             from matador.compute import FullRelaxer
 
+                        queues.append(mp.Queue())
                         relaxer = FullRelaxer(ncores=ncores, nnodes=None, node=node,
                                               res=newborns[-1], param_dict=self.param_dict, cell_dict=self.cell_dict,
-                                              debug=False, verbosity=self.verbosity, killcheck=True,
+                                              verbosity=1, killcheck=True,
                                               reopt=False, executable=self.executable,
+                                              output_queue=queues[-1],
                                               start=False, **self.relaxer_params)
-                    queues.append(mp.Queue())
                     # store proc object with structure ID, node name, output queue and number of cores
                     procs.append((newborn_id, node,
-                                  mp.Process(target=relaxer.relax,
-                                             args=(queues[-1],)),
+                                  mp.Process(target=relaxer.relax),
                                   ncores))
                     procs[-1][2].start()
                     logging.info('Initialised relaxation for newborn {} on node {} with {} cores.'
