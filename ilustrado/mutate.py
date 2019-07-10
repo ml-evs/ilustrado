@@ -3,7 +3,6 @@
 mutations.
 """
 
-import logging
 from traceback import print_exc
 from copy import deepcopy
 
@@ -13,6 +12,8 @@ from sklearn.cluster import KMeans
 from matador.utils.cell_utils import cart2abc
 from matador.utils.chem_utils import get_stoich
 from matador.plugins.voronoi_interface.voronoi_interface import get_voronoi_points
+
+from .util import LOG
 
 
 def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
@@ -37,10 +38,10 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
                     debug=debug)
         except RuntimeError:
             print_exc()
-            logging.warning('Issue with {}'.format(mutations))
+            LOG.warning('Issue with {}'.format(mutations))
         attempts += 1
     if attempts == max_attempts:
-        logging.warning('Failed to mutate with {}'.format(mutations))
+        LOG.warning('Failed to mutate with {}'.format(mutations))
         return parent
 
     return mutant

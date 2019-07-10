@@ -26,7 +26,7 @@ from matador.hull import QueryConvexHull
 from .adapt import adapt
 from .generation import Generation
 from .fitness import FitnessCalculator
-from .util import strip_useless
+from .util import strip_useless, LOG
 
 __version__ = require('ilustrado')[0].version
 
@@ -186,11 +186,19 @@ class ArtificialSelector:
         # set up logging
         numeric_loglevel = getattr(logging, self.loglevel.upper(), None)
         if not isinstance(numeric_loglevel, int):
-            exit(self.loglevel, 'is an invalid log level, please use either info, debug or warning.')
-        logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
-                            filename=self.run_hash+'.log',
-                            level=numeric_loglevel)
-        logging.info('Starting up ilustrado {}'.format(__version__))
+            exit(self.loglevel, 'is an invalid log level, please use either `info`, `debug` or `warning`.')
+        file_handler = logging.FileHandler(self.run_hash + '.log', mode='w')
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)8s: %(message)s'))
+
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(numeric_loglevel)
+        stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)8s: %(message)s'))
+
+        LOG.addHandler(file_handler)
+        LOG.addHandler(stream_handler)
+
+        LOG.info('Starting up ilustrado {}'.format(__version__))
 
         # initialise fitness calculator
         if self.fitness_metric == 'hull' and self.hull is None:
@@ -209,7 +217,7 @@ class ArtificialSelector:
         self.fitness_calculator = FitnessCalculator(fitness_metric=self.fitness_metric,
                                                     hull=self.hull, sandbagging=self.sandbagging,
                                                     debug=self.debug)
-        logging.debug('Successfully initialised fitness calculator.')
+        LOG.debug('Successfully initialised fitness calculator.')
 
         # if we're checking hull pdfs too, make this list now
         if self.check_dupes_hull:
@@ -221,12 +229,12 @@ class ArtificialSelector:
                 del self.hull.cursor[ind]['pdf']
         else:
             self.extra_pdfs = None
-        logging.info('Successfully initialised similarity lists.')
+        LOG.info('Successfully initialised similarity lists.')
 
         if self.recover_from is not None:
             print('Attempting to recover from run {}'.format(self.run_hash))
             if isinstance(self.recover_from, str):
-                logging.info('Attempting to recover from previous run {}'.format(self.run_hash))
+                LOG.info('Attempting to recover from previous run {}'.format(self.run_hash))
             self.recover()
 
         if not self.load_only:
@@ -251,7 +259,7 @@ class ArtificialSelector:
         else:
             self.seed = 'ga_test'
         print('Done!\n')
-        logging.debug('Successfully initialised cell and param files.')
+        LOG.debug('Successfully initialised cell and param files.')
 
         if self.recover_from is None:
             self.seed_generation_0(self.gene_pool)
@@ -259,24 +267,24 @@ class ArtificialSelector:
         if self.debug:
             print(self.nodes)
         if self.nodes is not None:
-            logging.debug('Running on nodes: {}'.format(' '.join(self.nodes)))
+            LOG.debug('Running on nodes: {}'.format(' '.join(self.nodes)))
         elif self.compute_mode == 'slurm':
-            logging.debug('Running through SLURM queue')
+            LOG.debug('Running through SLURM queue')
         else:
-            logging.debug('Running on local machine')
+            LOG.debug('Running on local machine')
 
         if self.debug:
             print('Current number of generations: {}. Target number: {}'.format(len(self.generations), self.num_generations))
         # run GA self.num_generations
         while len(self.generations) < self.num_generations:
             self.breed_generation()
-            logging.info('Successfully bred generation {}'.format(len(self.generations)))
+            LOG.info('Successfully bred generation {}'.format(len(self.generations)))
 
         assert len(self.generations) == self.num_generations
         print('Reached target number of generations!')
         print('Completed GA!')
-        logging.info('Reached target number of generations!')
-        logging.info('Completed GA!')
+        LOG.info('Reached target number of generations!')
+        LOG.info('Completed GA!')
         if not self.testing:
             self.finalise_files_for_export()
 
@@ -299,14 +307,14 @@ class ArtificialSelector:
             self.batch_birth()
 
         if len(self.next_gen) < self.population:
-            logging.warning('Next gen is smaller than desired population.')
+            LOG.warning('Next gen is smaller than desired population.')
         assert len(self.next_gen) >= self.population
 
         self.next_gen.rank()
-        logging.info('Ranked structures in generation {}'.format(len(self.generations)))
+        LOG.info('Ranked structures in generation {}'.format(len(self.generations)))
         if not self.testing:
             cleaned = self.next_gen.clean()
-            logging.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations), cleaned))
+            LOG.info('Cleaned structures in generation {}, removed {}'.format(len(self.generations), cleaned))
 
         self.enforce_elitism()
         self.reset_and_dump()
@@ -334,14 +342,15 @@ class ArtificialSelector:
         If not, create a new generation of structures, dump the unrelaxed structures to file,
         create the jobscripts to relax them, submit them and the job to check up on the relaxations,
         then exit.
+
         """
 
         entry = 'Beginning birthing of generation {}...'.format(len(self.generations))
-        logging.info(entry)
+        LOG.info(entry)
         print(entry)
         fname = '{}-genunrelaxed.json'.format(self.run_hash)
         if isfile(fname):
-            logging.info('Found existing generation to be relaxed...')
+            LOG.info('Found existing generation to be relaxed...')
             # load the unrelaxed structures into a dummy generation
             assert isfile(fname)
             unrelaxed_gen = Generation(self.run_hash,
@@ -351,7 +360,7 @@ class ArtificialSelector:
                                        dumpfile=fname,
                                        fitness_calculator=None)
             # check to see which unrelaxed structures completed successfully
-            logging.info('Scanning for completed relaxations...')
+            LOG.info('Scanning for completed relaxations...')
             for ind, newborn in enumerate(unrelaxed_gen):
                 completed_filename = 'completed/{}.castep'.format(newborn['source'][0])
                 if isfile(completed_filename):
@@ -365,9 +374,9 @@ class ArtificialSelector:
                         self.scrape_result(newborn)
 
             # if there are not enough unrelaxed structures after that run, clean up then resubmit
-            logging.info('Found enough {} structures of target {}'.format(len(self.next_gen), self.population))
+            LOG.info('Found enough {} structures of target {}'.format(len(self.next_gen), self.population))
             if len(self.next_gen) < self.population:
-                logging.info('Initialising new relaxation jobs...')
+                LOG.info('Initialising new relaxation jobs...')
                 import matador.compute.slurm
                 from matador.compute import reset_job_folder_and_count_remaining
                 slurm_dict = matador.compute.slurm.get_slurm_env(fail_loudly=True)
@@ -375,22 +384,22 @@ class ArtificialSelector:
 
                 # check if we can even finish this generation
                 if num_remaining < self.population - len(self.next_gen):
-                    logging.warning('There were too many failures, not enough remaining calculations to reach target.')
-                    logging.warning('Consider restarting with a larger allowed failure_ratio.')
+                    LOG.warning('There were too many failures, not enough remaining calculations to reach target.')
+                    LOG.warning('Consider restarting with a larger allowed failure_ratio.')
                     exit('Failed to return enough successful structures to continue, exiting...')
 
                 # adjust number of nodes so we don't get stuck in the queue
                 if self.max_num_nodes > num_remaining:
-                    logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
+                    LOG.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
                     self.max_num_nodes = self.population - len(self.next_gen)
 
                 self.slurm_submit_relaxations_and_monitor(slurm_dict)
-                logging.info('Exiting monitor...')
+                LOG.info('Exiting monitor...')
                 exit(0)
 
             # otherwise, remove unfinished structures from job file and release control of this generation
             else:
-                logging.info('Found enough structures to continue!'.format())
+                LOG.info('Found enough structures to continue!'.format())
                 completed_filename = 'completed/{}.castep'.format(newborn['source'][0])
                 count = 0
                 for doc in unrelaxed_gen:
@@ -398,30 +407,29 @@ class ArtificialSelector:
                     if isfile(structure):
                         remove(structure)
                         count += 1
-                logging.info('Removed {} structures from job folder.'.format(count))
+                LOG.info('Removed {} structures from job folder.'.format(count))
                 return
 
         # otherwise, generate a new unrelaxed generation and submit
         else:
-            logging.info('Initialising new generation...')
+            LOG.info('Initialising new generation...')
             import matador.compute.slurm
             slurm_dict = matador.compute.slurm.get_slurm_env(fail_loudly=True)
             self.write_unrelaxed_generation()
             self.slurm_submit_relaxations_and_monitor(slurm_dict)
-            logging.info('Exiting monitor...')
+            LOG.info('Exiting monitor...')
             exit(0)
 
     def slurm_submit_relaxations_and_monitor(self, slurm_dict):
         """ Prepare and submit the appropriate slurm files.
 
         Parameters:
-
             slurm_dict (dict): dict containing SLURM environment variables.
 
         """
         # prepare script to relax this generation
         import matador.compute.slurm
-        logging.info('Preparing to submit slurm scripts...')
+        LOG.info('Preparing to submit slurm scripts...')
         relax_fname = '{}_relax.job'.format(self.run_hash)
         # override jobname with this run's hash to allow for selective job killing
         slurm_dict['SLURM_JOB_NAME'] = self.run_hash
@@ -434,7 +442,7 @@ class ArtificialSelector:
                                                             num_nodes=1)
         if self.max_num_nodes > self.max_attempts:
             self.max_num_nodes = self.max_attempts
-            logging.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
+            LOG.info('Adjusted max num nodes to {}'.format(self.max_num_nodes))
 
         # prepare script to read in results
         monitor_fname = '{}_monitor.job'.format(self.run_hash)
@@ -448,13 +456,13 @@ class ArtificialSelector:
         # submit jobs, if any exceptions, cancel all jobs
         try:
             array_job_id = matador.compute.slurm.submit_slurm_script(relax_fname, num_array_tasks=self.max_num_nodes)
-            logging.info('Submitted job array: {}'.format(array_job_id))
+            LOG.info('Submitted job array: {}'.format(array_job_id))
             monitor_job_id = matador.compute.slurm.submit_slurm_script(monitor_fname, depend_on_job=array_job_id)
-            logging.info('Submitted monitor job: {}'.format(monitor_job_id))
+            LOG.info('Submitted monitor job: {}'.format(monitor_job_id))
         except:
-            logging.error('Something went wrong, trying to cancel all jobs.')
+            LOG.error('Something went wrong, trying to cancel all jobs.')
             output = matador.compute.slurm.scancel_all_matching_jobs(name=self.run_hash)
-            logging.error('scancel output: {}'.format(output))
+            LOG.error('scancel output: {}'.format(output))
             exit('Something went wrong, please check the log file.')
 
     def continuous_birth(self):
@@ -553,7 +561,7 @@ class ArtificialSelector:
                                   mp.Process(target=relaxer.relax),
                                   ncores))
                     procs[-1][2].start()
-                    logging.info('Initialised relaxation for newborn {} on node {} with {} cores.'
+                    LOG.info('Initialised relaxation for newborn {} on node {} with {} cores.'
                                  .format(', '.join(newborns[-1]['source']), node, ncores))
 
                 # are we using all nodes? if so, are they all still running?
@@ -562,32 +570,32 @@ class ArtificialSelector:
                     sleep(10)
                 # so we were using all nodes, but some have died...
                 else:
-                    logging.debug('Suspected at least one dead node')
+                    LOG.debug('Suspected at least one dead node')
                     # then find the dead ones, collect their results and
                     # delete them so we're no longer using all nodes
                     found_node = False
                     for ind, proc in enumerate(procs):
                         if not proc[2].is_alive():
-                            logging.debug('Found dead node {}'.format(proc[1]))
+                            LOG.debug('Found dead node {}'.format(proc[1]))
                             try:
                                 result = queues[ind].get(timeout=60)
                             except:
                                 result = False
-                                logging.warning('Node {} failed to write to queue for newborn {}'
+                                LOG.warning('Node {} failed to write to queue for newborn {}'
                                                 .format(proc[1],
                                                         ', '.join(newborns[proc[0]]['source'])))
                             if isinstance(result, dict):
                                 self.scrape_result(result, proc=proc, newborns=newborns)
                             try:
                                 procs[ind][2].join(timeout=10)
-                                logging.debug('Process {} on node {} died gracefully.'
+                                LOG.debug('Process {} on node {} died gracefully.'
                                               .format(proc[0], proc[1]))
                             except:
-                                logging.warning('Process {} on node {} has not died gracefully.'
+                                LOG.warning('Process {} on node {} has not died gracefully.'
                                                 .format(proc[0], proc[1]))
                                 procs[ind][2].terminate()
 
-                                logging.warning('Process {} on node {} terminated forcefully.'
+                                LOG.warning('Process {} on node {} terminated forcefully.'
                                                 .format(proc[0], proc[1]))
                             if result is not False:
                                 free_nodes.append(proc[1])
@@ -602,23 +610,23 @@ class ArtificialSelector:
                     if not found_node:
                         sleep(10)
         except:
-            logging.warning('Something has gone terribly wrong...')
-            logging.error('Exception caught:', exc_info=True)
+            LOG.warning('Something has gone terribly wrong...')
+            LOG.error('Exception caught:', exc_info=True)
             print_exc()
             # clean up on error/interrupt
             if len(procs) > 1:
                 self.kill_all(procs)
             raise SystemExit
 
-        logging.info('No longer breeding structures in this generation.')
+        LOG.info('No longer breeding structures in this generation.')
         # clean up at end either way
         if len(procs) > 1:
-            logging.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
+            LOG.info('Trying to kill {} on {} processes.'.format(self.executable, len(procs)))
             for proc in procs:
                 self.kill_all(procs)
 
         if attempts >= self.max_attempts:
-            logging.warning('Failed to return enough successful structures to continue...')
+            LOG.warning('Failed to return enough successful structures to continue...')
             print('Failed to return enough successful structures to continue, exiting...')
             exit()
 
@@ -644,9 +652,9 @@ class ArtificialSelector:
 
         self.next_gen.set_bourgeoisie(elites=elites, best_from_stoich=self.best_from_stoich)
 
-        logging.info('Added elite structures from previous generation to next gen.')
-        logging.info('New length of next gen: {}.'.format(len(self.next_gen)))
-        logging.info('New length of bourgeoisie: {}.'.format(len(self.next_gen.bourgeoisie)))
+        LOG.info('Added elite structures from previous generation to next gen.')
+        LOG.info('New length of next gen: {}.'.format(len(self.next_gen)))
+        LOG.info('New length of bourgeoisie: {}.'.format(len(self.next_gen.bourgeoisie)))
 
     def reset_and_dump(self):
         """ Add now complete generation to generation list, reset
@@ -657,7 +665,7 @@ class ArtificialSelector:
         # reset next_gen ready for, well, the next gen
         self.next_gen = None
         assert self.generations[-1] is not None
-        logging.info('Added current generation {} to generation list.'
+        LOG.info('Added current generation {} to generation list.'
                      .format(len(self.generations)-1))
         # remove interim dump file and create new ones for populace and bourgeoisie
         self.generations[-1].dump(len(self.generations)-1)
@@ -666,7 +674,7 @@ class ArtificialSelector:
             remove('{}-gencurrent.json'.format(self.run_hash))
         if isfile('{}-genunrelaxed.json'.format(self.run_hash)):
             remove('{}-genunrelaxed.json'.format(self.run_hash))
-        logging.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
+        LOG.info('Dumped generation file for generation {}'.format(len(self.generations)-1))
 
     def birth_new_structure(self):
         """ Generate a new structure from current settings.
@@ -697,7 +705,7 @@ class ArtificialSelector:
                                                      self.run_hash,
                                                      len(self.generations),
                                                      newborn_source_id)]
-        logging.info('Initialised newborn {} with mutations ({})'
+        LOG.info('Initialised newborn {} with mutations ({})'
                      .format(', '.join(newborn['source']),
                              ', '.join(newborn['mutations'])))
         return newborn
@@ -724,10 +732,10 @@ class ArtificialSelector:
         if result.get('optimised'):
             status = 'Relaxed'
             if proc is not None:
-                logging.debug('Newborn {} successfully optimised'
+                LOG.debug('Newborn {} successfully optimised'
                               .format(', '.join(newborns[proc[0]]['source'])))
                 if result.get('parents') is None:
-                    logging.warning(
+                    LOG.warning(
                         'Failed to get parents for newborn {}.'
                         .format(', '.join(newborns[proc[0]]['source'])))
                     result['parents'] = newborns[proc[0]]['parents']
@@ -740,19 +748,19 @@ class ArtificialSelector:
                 if dupe:
                     status = 'Duplicate'
                     if proc is not None:
-                        logging.debug('Newborn {} is a duplicate and will not be included.'
+                        LOG.debug('Newborn {} is a duplicate and will not be included.'
                                       .format(', '.join(newborns[proc[0]]['source'])))
                     with open(self.run_hash+'-dupe.json', 'a') as f:
                         dump(result, f, sort_keys=False, indent=2)
             elif not dupe:
                 self.next_gen.birth(result)
                 if proc is not None:
-                    logging.info('Newborn {} added to next generation.'
+                    LOG.info('Newborn {} added to next generation.'
                                  .format(', '.join(newborns[proc[0]]['source'])))
-                logging.info('Current generation size: {}'
+                LOG.info('Current generation size: {}'
                              .format(len(self.next_gen)))
                 self.next_gen.dump('current')
-                logging.debug('Dumping json file for interim generation...')
+                LOG.debug('Dumping json file for interim generation...')
         else:
             status = 'Failed'
             result = strip_useless(result)
@@ -787,13 +795,13 @@ class ArtificialSelector:
             exit('Failed to load run, files missing for {}'.format(self.run_hash))
         if isfile(('{}-gencurrent.json').format(self.run_hash)) and self.compute_mode != 'slurm':
             incomplete = True
-            logging.info('Found incomplete generation for {}'.format(self.run_hash))
+            LOG.info('Found incomplete generation for {}'.format(self.run_hash))
         else:
             incomplete = False
         try:
             i = 0
             while isfile('{}-gen{}.json'.format(self.run_hash, i)):
-                logging.info('Trying to load generation {} from run {}.'.format(i, self.run_hash))
+                LOG.info('Trying to load generation {} from run {}.'.format(i, self.run_hash))
                 fname = '{}-gen{}.json'.format(self.run_hash, i)
                 self.generations.append(Generation(self.run_hash,
                                                    i,
@@ -801,20 +809,20 @@ class ArtificialSelector:
                                                    self.num_accepted,
                                                    dumpfile=fname,
                                                    fitness_calculator=None))
-                logging.info('Successfully loaded {} structures into generation {} from run {}.'.format(len(self.generations[-1]), i, self.run_hash))
+                LOG.info('Successfully loaded {} structures into generation {} from run {}.'.format(len(self.generations[-1]), i, self.run_hash))
                 i += 1
             print('Recovered from run {}'.format(self.run_hash))
-            logging.info('Successfully loaded run {}.'.format(self.run_hash))
+            LOG.info('Successfully loaded run {}.'.format(self.run_hash))
         except:
             print_exc()
-            logging.error('Something went wrong when reloading run {}'.format(self.run_hash))
+            LOG.error('Something went wrong when reloading run {}'.format(self.run_hash))
             exit('Something went wrong when reloading run {}'.format(self.run_hash))
         assert len(self.generations) > 0
         for i in range(len(self.generations)):
             if not self.testing:
                 if i != 0:
                     removed = self.generations[i].clean()
-                    logging.info('Removed {} structures from generation {}'.format(removed, i))
+                    LOG.info('Removed {} structures from generation {}'.format(removed, i))
             if i == len(self.generations)-1 and len(self.generations) > 1:
                 if self.num_elite <= len(self.generations[-2].bourgeoisie):
                     # generate elites with probability proportional to their fitness, but ensure every p is non-zero
@@ -833,11 +841,11 @@ class ArtificialSelector:
                     self.generations[i].load_bourgeoisie(bourge_fname)
                 else:
                     self.generations[i].set_bourgeoisie(best_from_stoich=self.best_from_stoich)
-            logging.info('Bourgeoisie contains {} structures: generation {}'.format(len(self.generations[i].bourgeoisie), i))
+            LOG.info('Bourgeoisie contains {} structures: generation {}'.format(len(self.generations[i].bourgeoisie), i))
             assert len(self.generations[i]) >= 1
             assert len(self.generations[i].bourgeoisie) >= 1
         if incomplete:
-            logging.info('Trying to load incomplete generation from run {}.'.format(self.run_hash))
+            LOG.info('Trying to load incomplete generation from run {}.'.format(self.run_hash))
             fname = '{}-gen{}.json'.format(self.run_hash, 'current')
             self.next_gen = Generation(self.run_hash,
                                        len(self.generations),
@@ -845,7 +853,7 @@ class ArtificialSelector:
                                        self.num_accepted,
                                        dumpfile=fname,
                                        fitness_calculator=self.fitness_calculator)
-            logging.info('Successfully loaded {} structures into current generation ({}) from run {}.'.format(len(self.next_gen),
+            LOG.info('Successfully loaded {} structures into current generation ({}) from run {}.'.format(len(self.next_gen),
                                                                                                               len(self.generations),
                                                                                                               self.run_hash))
             assert len(self.next_gen) >= 1
@@ -899,7 +907,7 @@ class ArtificialSelector:
 
         self.generations[-1].set_bourgeoisie(best_from_stoich=False)
 
-        logging.info('Successfully initialised generation 0 with {} members'
+        LOG.info('Successfully initialised generation 0 with {} members'
                      .format(len(self.generations[-1])))
         self.generations[0].dump(0)
         self.generations[0].dump_bourgeoisie(0)

@@ -3,7 +3,6 @@
 
 from itertools import product
 from traceback import print_exc
-import logging
 import copy
 
 import numpy as np
@@ -15,7 +14,7 @@ from matador.utils.chem_utils import get_root_source
 
 from .mutate import mutate
 from .crossover import crossover
-from .util import strip_useless
+from .util import strip_useless, LOG
 
 
 def adapt(
@@ -51,7 +50,7 @@ def adapt(
     """
     total_rate = mutation_rate + crossover_rate
     if total_rate != 1.0:
-        logging.debug("Total mutation rate not 1 ({}), rescaling...".format(total_rate))
+        LOG.debug("Total mutation rate not 1 ({}), rescaling...".format(total_rate))
     mutation_rate /= total_rate
     crossover_rate /= total_rate
     assert mutation_rate + crossover_rate == 1.0
@@ -108,7 +107,7 @@ def adapt(
             except Exception as oops:
                 if debug:
                     print_exc()
-                logging.warning("Mutation failed with error {}".format(oops))
+                LOG.warning("Mutation failed with error {}".format(oops))
                 valid_cell = False
         # otherwise, do crossover
         else:
@@ -123,7 +122,7 @@ def adapt(
                 parents = copy.deepcopy(possible_parents)
             elif len(possible_parents) == 1:
                 parents = 2 * [copy.deepcopy(possible_parents[0])]
-                logging.warning(
+                LOG.warning(
                     "Only one possible parent: performing self-crossover..."
                 )
 
@@ -139,13 +138,13 @@ def adapt(
             except Exception as oops:
                 if debug:
                     print_exc()
-                logging.warning("Crossover failed with error {}".format(oops))
+                LOG.warning("Crossover failed with error {}".format(oops))
                 valid_cell = False
         num_iter += 1
 
-    logging.info("Initialised newborn after {} trials".format(num_iter))
+    LOG.info("Initialised newborn after {} trials".format(num_iter))
     if num_iter == max_restarts:
-        logging.warning(
+        LOG.warning(
             "Max restarts reached in mutations, something has gone wrong... "
             "running with possibly unphysical cell"
         )
@@ -200,7 +199,7 @@ def check_feasible(
         message = "Mutant with {} failed to pass the custom filter.".format(
             ", ".join(mutant["mutations"])
         )
-        logging.debug(message)
+        LOG.debug(message)
         if debug:
             print(message)
         return False
@@ -211,7 +210,7 @@ def check_feasible(
         message = "Mutant with {} contained too many atoms ({} vs {}).".format(
             ", ".join(mutant["mutations"]), mutant["num_atoms"], max_num_atoms
         )
-        logging.debug(message)
+        LOG.debug(message)
         if debug:
             print(message)
         return False
@@ -229,7 +228,7 @@ def check_feasible(
         message = "Mutant with {} failed number density.".format(
             ", ".join(mutant["mutations"])
         )
-        logging.debug(message)
+        LOG.debug(message)
         if debug:
             print(message)
         return False
@@ -243,7 +242,7 @@ def check_feasible(
         message = "Mutant with {} failed cell angle check.".format(
             ", ".join(mutant["mutations"])
         )
-        logging.debug(message)
+        LOG.debug(message)
         if debug:
             print(message)
             return False
@@ -251,7 +250,7 @@ def check_feasible(
         message = "Mutant with {} failed cell angle check.".format(
             ", ".join(mutant["mutations"])
         )
-        logging.debug(message)
+        LOG.debug(message)
         if debug:
             print(message)
         return False
@@ -260,7 +259,7 @@ def check_feasible(
         message = "Mutant with {} transmutation error.".format(
             ", ".join(mutant["mutations"])
         )
-        logging.debug(message)
+        LOG.debug(message)
         if debug:
             print(message)
         return False
@@ -328,6 +327,6 @@ def minseps_feasible(mutant, minsep_dict=None, debug=False):
                     message = "Mutant with {} failed minsep check.".format(
                         ", ".join(mutant["mutations"])
                     )
-                    logging.debug(message)
+                    LOG.debug(message)
                     return False
     return True
