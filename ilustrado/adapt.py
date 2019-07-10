@@ -122,9 +122,7 @@ def adapt(
                 parents = copy.deepcopy(possible_parents)
             elif len(possible_parents) == 1:
                 parents = 2 * [copy.deepcopy(possible_parents[0])]
-                LOG.warning(
-                    "Only one possible parent: performing self-crossover..."
-                )
+                LOG.warning("Only one possible parent: performing self-crossover...")
 
             try:
                 newborn = crossover(parents, debug=debug)
