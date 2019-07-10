@@ -6,9 +6,13 @@
 
 import sys
 import os
-import numpy as np
+import logging
 from time import sleep
+
+import numpy as np
 from matador.compute import FullRelaxer
+
+LOG = logging.getLogger('ilustrado')
 
 def strip_useless(doc, to_run=False):
     """ Strip useless information from a matador doc.
