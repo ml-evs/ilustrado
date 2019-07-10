@@ -32,16 +32,18 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     max_attempts = 100
     while parent == mutant and attempts < max_attempts:
         try:
-            _mutate(mutant,
-                    mutations=mutations,
-                    max_num_mutations=max_num_mutations,
-                    debug=debug)
+            _mutate(
+                mutant,
+                mutations=mutations,
+                max_num_mutations=max_num_mutations,
+                debug=debug,
+            )
         except RuntimeError:
             print_exc()
-            LOG.warning('Issue with {}'.format(mutations))
+            LOG.warning("Issue with {}".format(mutations))
         attempts += 1
     if attempts == max_attempts:
-        LOG.warning('Failed to mutate with {}'.format(mutations))
+        LOG.warning("Failed to mutate with {}".format(mutations))
         return parent
 
     return mutant
@@ -59,26 +61,28 @@ def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
 
     """
     if mutations is None:
-        possible_mutations = [permute_atoms,
-                              random_strain,
-                              nudge_positions,
-                              vacancy,
-                              voronoi_shuffle]
+        possible_mutations = [
+            permute_atoms,
+            random_strain,
+            nudge_positions,
+            vacancy,
+            voronoi_shuffle,
+        ]
     else:
         possible_mutations = mutations
     if max_num_mutations == 1:
         num_mutations = 1
     else:
-        num_mutations = np.random.randint(1, high=max_num_mutations+1)
+        num_mutations = np.random.randint(1, high=max_num_mutations + 1)
     if debug:
-        print('num_mutations', num_mutations)
+        print("num_mutations", num_mutations)
     # get random list of num_mutations mutators to apply
     mutations = []
-    mutant['mutations'] = []
+    mutant["mutations"] = []
     for _ in range(num_mutations):
         mutation = np.random.choice(possible_mutations)
         mutations.append(mutation)
-        mutant['mutations'].append(str(mutation).split(' ')[1])
+        mutant["mutations"].append(str(mutation).split(" ")[1])
     # apply successive mutations to mutant
     for mutator in mutations:
         mutator(mutant, debug=debug)
@@ -94,29 +98,29 @@ def permute_atoms(mutant, debug=False):
         RuntimeError: if only one type of atom is present.
 
     """
-    num_atoms = mutant['num_atoms']
-    initial_atoms = deepcopy(mutant['atom_types'])
+    num_atoms = mutant["num_atoms"]
+    initial_atoms = deepcopy(mutant["atom_types"])
     if len(set(initial_atoms)) == 1:
-        raise RuntimeError('Could not apply permute_atoms as only one type.')
+        raise RuntimeError("Could not apply permute_atoms as only one type.")
 
     # choose atoms to swap
     valid = True
-    idx_a = np.random.randint(0, num_atoms-1)
-    idx_b = np.random.randint(0, num_atoms-1)
+    idx_a = np.random.randint(0, num_atoms - 1)
+    idx_b = np.random.randint(0, num_atoms - 1)
     while not valid:
-        if mutant['atom_types'][idx_a] != mutant['atom_types'][idx_b]:
+        if mutant["atom_types"][idx_a] != mutant["atom_types"][idx_b]:
             valid = True
-        idx_b = np.random.randint(0, num_atoms-1)
+        idx_b = np.random.randint(0, num_atoms - 1)
 
     # swap atoms
     if debug:
-        print(idx_b, mutant['atom_types'][idx_b], idx_a, mutant['atom_types'][idx_a])
-    temp = deepcopy(mutant['atom_types'][idx_b])
-    mutant['atom_types'][idx_b] = deepcopy(mutant['atom_types'][idx_a])
-    mutant['atom_types'][idx_a] = deepcopy(temp)
+        print(idx_b, mutant["atom_types"][idx_b], idx_a, mutant["atom_types"][idx_a])
+    temp = deepcopy(mutant["atom_types"][idx_b])
+    mutant["atom_types"][idx_b] = deepcopy(mutant["atom_types"][idx_a])
+    mutant["atom_types"][idx_a] = deepcopy(temp)
 
     if debug:
-        print(list(zip(range(0, num_atoms), initial_atoms, mutant['atom_types'])))
+        print(list(zip(range(0, num_atoms), initial_atoms, mutant["atom_types"])))
 
 
 def transmute_atoms(mutant, debug=False):
@@ -129,18 +133,18 @@ def transmute_atoms(mutant, debug=False):
         RuntimeError: if only one type of atom is present.
 
     """
-    types = list(set(mutant['atom_types']))
+    types = list(set(mutant["atom_types"]))
     if len(types) < 2:
-        raise RuntimeError('Unable to transmute, only one atom type present.')
+        raise RuntimeError("Unable to transmute, only one atom type present.")
 
-    transmute_idx = np.random.randint(0, mutant['num_atoms']-1)
-    transmute_type = mutant['atom_types'][transmute_idx]
+    transmute_idx = np.random.randint(0, mutant["num_atoms"] - 1)
+    transmute_type = mutant["atom_types"][transmute_idx]
 
     del types[types.index(transmute_type)]
     new_type = np.random.choice(types)
     assert new_type != transmute_type
 
-    mutant['atom_types'][transmute_idx] = new_type
+    mutant["atom_types"][transmute_idx] = new_type
 
 
 def vacancy(mutant, debug=False):
@@ -150,20 +154,25 @@ def vacancy(mutant, debug=False):
         mutant (dict): structure to mutate in-place.
 
     """
-    vacancy_idx = np.random.randint(0, mutant['num_atoms']-1)
+    vacancy_idx = np.random.randint(0, mutant["num_atoms"] - 1)
     if debug:
-        print('Removing atom {} of type {} from cell.'.format(vacancy_idx,
-                                                              mutant['atom_types'][vacancy_idx]))
-    del mutant['atom_types'][vacancy_idx]
-    del mutant['positions_frac'][vacancy_idx]
-    if 'positions_abs' in mutant:
-        del mutant['positions_abs'][vacancy_idx]
-    mutant['num_atoms'] = len(mutant['atom_types'])
+        print(
+            "Removing atom {} of type {} from cell.".format(
+                vacancy_idx, mutant["atom_types"][vacancy_idx]
+            )
+        )
+    del mutant["atom_types"][vacancy_idx]
+    del mutant["positions_frac"][vacancy_idx]
+    if "positions_abs" in mutant:
+        del mutant["positions_abs"][vacancy_idx]
+    mutant["num_atoms"] = len(mutant["atom_types"])
     # calculate stoichiometry
-    mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
+    mutant["stoichiometry"] = get_stoich(mutant["atom_types"])
 
 
-def voronoi_shuffle(mutant, element_to_remove=None, preserve_stoich=False, debug=False, testing=False):
+def voronoi_shuffle(
+    mutant, element_to_remove=None, preserve_stoich=False, debug=False, testing=False
+):
     """ Remove all atoms of type element, then perform Voronoi analysis
     on the remaining sublattice. Cluster the nodes with KMeans, then
     repopulate the clustered Voronoi nodes with atoms of the removed element.
@@ -182,44 +191,52 @@ def voronoi_shuffle(mutant, element_to_remove=None, preserve_stoich=False, debug
     """
     if testing:
         from matador.export import doc2res
-        doc2res(mutant, 'initial_cell')
+
+        doc2res(mutant, "initial_cell")
 
     if element_to_remove is None:
-        element_to_remove = np.random.choice(list(set(mutant['atom_types'])))
-    mutant['atom_types'], mutant['positions_frac'] = \
-        zip(*[(atom, pos) for (atom, pos) in zip(mutant['atom_types'],
-                                                 mutant['positions_frac']) if atom != element_to_remove])
-    num_removed = mutant['num_atoms'] - len(mutant['atom_types'])
+        element_to_remove = np.random.choice(list(set(mutant["atom_types"])))
+    mutant["atom_types"], mutant["positions_frac"] = zip(
+        *[
+            (atom, pos)
+            for (atom, pos) in zip(mutant["atom_types"], mutant["positions_frac"])
+            if atom != element_to_remove
+        ]
+    )
+    num_removed = mutant["num_atoms"] - len(mutant["atom_types"])
 
     if debug:
-        print('Removed {} atoms of type {}'.format(num_removed, element_to_remove))
+        print("Removed {} atoms of type {}".format(num_removed, element_to_remove))
 
-    mutant['num_atoms'] = len(mutant['atom_types'])
-    mutant['atom_types'], mutant['positions_frac'] = list(mutant['atom_types']), list(mutant['positions_frac'])
+    mutant["num_atoms"] = len(mutant["atom_types"])
+    mutant["atom_types"], mutant["positions_frac"] = (
+        list(mutant["atom_types"]),
+        list(mutant["positions_frac"]),
+    )
 
     if testing:
-        doc2res(mutant, 'post_removal_cell')
+        doc2res(mutant, "post_removal_cell")
 
     try:
-        mutant['voronoi_nodes'] = get_voronoi_points(mutant)
-        if not mutant['voronoi_nodes']:
+        mutant["voronoi_nodes"] = get_voronoi_points(mutant)
+        if not mutant["voronoi_nodes"]:
             raise RuntimeError
 
         if testing:
             voro_mutant = deepcopy(mutant)
-            for node in mutant['voronoi_nodes']:
-                voro_mutant['atom_types'].append('H')
-                voro_mutant['positions_frac'].append(node)
-                voro_mutant['num_atoms'] += 1
-            doc2res(voro_mutant, 'voronoi_cell')
+            for node in mutant["voronoi_nodes"]:
+                voro_mutant["atom_types"].append("H")
+                voro_mutant["positions_frac"].append(node)
+                voro_mutant["num_atoms"] += 1
+            doc2res(voro_mutant, "voronoi_cell")
 
     except Exception:
         if debug:
             print_exc()
-        raise RuntimeError('Voronoi code failed')
+        raise RuntimeError("Voronoi code failed")
 
     if debug:
-        print('Computed {} Voronoi nodes'.format(len(mutant['voronoi_nodes'])))
+        print("Computed {} Voronoi nodes".format(len(mutant["voronoi_nodes"])))
 
     if preserve_stoich:
         num_to_put_back = num_removed
@@ -227,40 +244,45 @@ def voronoi_shuffle(mutant, element_to_remove=None, preserve_stoich=False, debug
         std_dev = int(np.sqrt(num_removed))
         try:
             num_to_put_back = np.random.randint(
-                low=max(num_removed-std_dev, 1),
-                high=min(num_removed+std_dev, len(mutant['voronoi_nodes'])))
+                low=max(num_removed - std_dev, 1),
+                high=min(num_removed + std_dev, len(mutant["voronoi_nodes"])),
+            )
         except Exception:
-            num_to_put_back = len(mutant['voronoi_nodes'])
+            num_to_put_back = len(mutant["voronoi_nodes"])
 
     if debug:
-        print('Going to insert {} atoms of type {}'.format(num_to_put_back, element_to_remove))
+        print(
+            "Going to insert {} atoms of type {}".format(
+                num_to_put_back, element_to_remove
+            )
+        )
 
     k_means = KMeans(n_clusters=num_to_put_back, precompute_distances=True)
-    k_means.fit(mutant['voronoi_nodes'])
-    mutant['voronoi_nodes'] = k_means.cluster_centers_.tolist()
+    k_means.fit(mutant["voronoi_nodes"])
+    mutant["voronoi_nodes"] = k_means.cluster_centers_.tolist()
     if testing:
         voro_mutant = deepcopy(mutant)
-        for node in mutant['voronoi_nodes']:
-            voro_mutant['atom_types'].append('H')
-            voro_mutant['positions_frac'].append(node)
-            voro_mutant['num_atoms'] += 1
-        doc2res(voro_mutant, 'clustered_voronoi_cell')
+        for node in mutant["voronoi_nodes"]:
+            voro_mutant["atom_types"].append("H")
+            voro_mutant["positions_frac"].append(node)
+            voro_mutant["num_atoms"] += 1
+        doc2res(voro_mutant, "clustered_voronoi_cell")
 
-    for node in mutant['voronoi_nodes']:
-        mutant['atom_types'].append(element_to_remove)
-        mutant['positions_frac'].append(node)
+    for node in mutant["voronoi_nodes"]:
+        mutant["atom_types"].append(element_to_remove)
+        mutant["positions_frac"].append(node)
 
     if debug:
-        print('Previously {} atoms in cell'.format(mutant['num_atoms']))
+        print("Previously {} atoms in cell".format(mutant["num_atoms"]))
 
-    mutant['num_atoms'] = len(mutant['atom_types'])
-    mutant['stoichiometry'] = get_stoich(mutant['atom_types'])
+    mutant["num_atoms"] = len(mutant["atom_types"])
+    mutant["stoichiometry"] = get_stoich(mutant["atom_types"])
 
     if testing:
-        doc2res(mutant, 'final_cell')
+        doc2res(mutant, "final_cell")
 
     if debug:
-        print('Now {} atoms in cell'.format(mutant['num_atoms']))
+        print("Now {} atoms in cell".format(mutant["num_atoms"]))
 
 
 def random_strain(mutant, debug=False):
@@ -272,9 +294,10 @@ def random_strain(mutant, debug=False):
         mutant (dict): structure to mutate in-place.
 
     """
+
     def generate_cell_transform_matrix():
         """ Pick a random transformation matrix. """
-        strain_components = 2*np.random.rand(6)-1
+        strain_components = 2 * np.random.rand(6) - 1
         cell_transform_matrix = np.eye(3)
         for i in range(3):
             cell_transform_matrix[i][i] += strain_components[i]
@@ -291,7 +314,7 @@ def random_strain(mutant, debug=False):
         cell_transform_matrix = generate_cell_transform_matrix()
         # only accept matrices with positive determinant, then scale that det to 1
         if np.linalg.det(cell_transform_matrix) > 0:
-            cell_transform_matrix /= pow(np.linalg.det(cell_transform_matrix), 1/3)
+            cell_transform_matrix /= pow(np.linalg.det(cell_transform_matrix), 1 / 3)
             valid = True
         if valid:
             # assert symmetry
@@ -300,8 +323,9 @@ def random_strain(mutant, debug=False):
             if debug:
                 print(cell_transform_matrix)
             # exclude all strains that take us to sub-60 and sup-120 cell angles
-            new_lattice_abc = cart2abc(np.matmul(cell_transform_matrix,
-                                                 np.array(mutant['lattice_cart'])))
+            new_lattice_abc = cart2abc(
+                np.matmul(cell_transform_matrix, np.array(mutant["lattice_cart"]))
+            )
             for angle in new_lattice_abc[1]:
                 if angle > 120 or angle < 60:
                     valid = False
@@ -311,13 +335,14 @@ def random_strain(mutant, debug=False):
                 if length < mean_lat_vec / 2:
                     valid = False
 
-    mutant['lattice_cart'] = np.matmul(cell_transform_matrix,
-                                       np.array(mutant['lattice_cart'])).tolist()
-    mutant['lattice_abc'] = cart2abc(mutant['lattice_cart'])
+    mutant["lattice_cart"] = np.matmul(
+        cell_transform_matrix, np.array(mutant["lattice_cart"])
+    ).tolist()
+    mutant["lattice_abc"] = cart2abc(mutant["lattice_cart"])
     if debug:
-        print('lattice_abc:', mutant['lattice_abc'])
-        print('lattice_cart:', mutant['lattice_cart'])
-        print('cell_transform_matrix:', cell_transform_matrix.tolist())
+        print("lattice_abc:", mutant["lattice_abc"])
+        print("lattice_cart:", mutant["lattice_cart"])
+        print("cell_transform_matrix:", cell_transform_matrix.tolist())
 
 
 def nudge_positions(mutant, amplitude=0.5, debug=False):
@@ -332,8 +357,8 @@ def nudge_positions(mutant, amplitude=0.5, debug=False):
         amplitude (float): amplitude of random noise in Angstroms.
 
     """
-    new_positions_frac = np.array(mutant['positions_frac'])
-    for ind, _ in enumerate(mutant['positions_frac']):
+    new_positions_frac = np.array(mutant["positions_frac"])
+    for ind, _ in enumerate(mutant["positions_frac"]):
         # generate random noise vector between -amplitude and amplitude
         new_positions_frac[ind] += amplitude * np.random.rand(3) - amplitude
         for i in range(3):
@@ -341,7 +366,7 @@ def nudge_positions(mutant, amplitude=0.5, debug=False):
                 new_positions_frac[ind][i] -= 1
             elif new_positions_frac[ind][i] < 0:
                 new_positions_frac[ind][i] += 1
-    mutant['positions_frac'] = new_positions_frac.tolist()
+    mutant["positions_frac"] = new_positions_frac.tolist()
 
 
 def null_nudge_positions(mutant, debug=False):
