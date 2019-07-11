@@ -17,6 +17,7 @@ from pkg_resources import require
 
 # matador modules
 import matador.compute
+import matador.compute.slurm
 from matador.scrapers.castep_scrapers import (
     res2dict,
     castep2dict,
