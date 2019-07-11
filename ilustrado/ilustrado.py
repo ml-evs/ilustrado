@@ -541,7 +541,7 @@ class ArtificialSelector:
                     LOG.info("Adjusted max num nodes to {}".format(self.max_num_nodes))
                     self.max_num_nodes = self.population - len(self.next_gen)
 
-                self.slurm_submit_relaxations_and_monitor(self.slurm_dict)
+                self.slurm_submit_relaxations_and_monitor()
                 LOG.info("Exiting monitor...")
                 exit(0)
 
@@ -561,7 +561,7 @@ class ArtificialSelector:
         else:
             LOG.info("Initialising new generation...")
             self.write_unrelaxed_generation()
-            self.slurm_submit_relaxations_and_monitor(self.slurm_dict)
+            self.slurm_submit_relaxations_and_monitor()
             LOG.info("Exiting monitor...")
             exit(0)
 
