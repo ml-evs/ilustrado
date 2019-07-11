@@ -39,8 +39,7 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
                 debug=debug,
             )
         except RuntimeError:
-            print_exc()
-            LOG.warning("Issue with {}".format(mutations))
+            pass
         attempts += 1
     if attempts == max_attempts:
         LOG.warning("Failed to mutate with {}".format(mutations))
@@ -378,4 +377,5 @@ def null_nudge_positions(mutant, debug=False):
         mutant (dict): structure to mutate in-place.
 
     """
+    nudge_positions(mutant, amplitude=0.001)
     nudge_positions(mutant, amplitude=0.001)

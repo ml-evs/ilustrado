@@ -13,6 +13,7 @@ import numpy as np
 from matador.compute import FullRelaxer
 
 LOG = logging.getLogger("ilustrado")
+LOG.setLevel(logging.DEBUG)
 
 
 def strip_useless(doc, to_run=False):
@@ -88,51 +89,61 @@ class FakeFullRelaxer(FullRelaxer):
 
     def __init__(self, *args, **kwargs):
         self.structure = kwargs["res"]
+        self.output_queue = kwargs["output_queue"]
 
-    def relax(self, output_queue=None):
+    def relax(self):
         fake_number_crunch = True
         if fake_number_crunch:
-            array = np.random.rand(50, 50)
+            size = np.random.randint(low=3, high=50)
+            array = np.random.rand(size, size)
             np.linalg.eig(array)
         self.structure["enthalpy_per_atom"] = -505 + np.random.rand()
-        sleep(np.random.rand())
         if np.random.rand() < 0.8:
             self.structure["optimised"] = True
         else:
             self.structure["optimised"] = False
-        output_queue.put(self.structure)
+        self.output_queue.put(self.structure)
+
+
+class NewbornProcess:
+    """ Simple container of process data. """
+
+    def __init__(self, newborn_id, node, process, ncores=None):
+        self.newborn_id = newborn_id
+        self.node = node
+        self.process = process
+        self.ncores = ncores
 
 
 class AseRelaxation:
     """ Perform relaxation with ASE LJ or EMT. """
 
-    def __init__(self, doc, type="LJ"):
+    def __init__(self, doc, queue, pot_type="LJ"):
         from copy import deepcopy
         from matador.utils.viz_utils import doc2ase
+        from ase.calculators.lj import LennardJones
+        from ase.calculators.emt import EMT
 
-        if type == "LJ":
-            from ase.calculators.lj import LennardJones
-            from ase.calculators.emt import EMT
-
+        if pot_type == "LJ":
             self.calc = LennardJones()
         else:
-            from ase.calculators.emt import EMT
-
             self.calc = EMT()
 
         self.doc = deepcopy(doc)
         self.atoms = doc2ase(doc)
         self.atoms.set_calculator(self.calc)
+        self.queue = queue
 
-    def relax(self, queue):
+    def relax(self):
         from ase.optimize import LBFGS
 
         cached = sys.__stdout__
         # sys.stdout = os.devnull
         try:
             optimizer = LBFGS(self.atoms)
+            optimizer.logfile = None
             optimised = optimizer.run(steps=50)
-        except:
+        except Exception:
             optimised = False
 
         self.doc["optimised"] = optimised
@@ -141,5 +152,5 @@ class AseRelaxation:
         self.doc["enthalpy_per_atom"] = self.calc.results["energy"] / len(
             self.doc["atom_types"]
         )
-        queue.put(self.doc)
+        self.queue.put(self.doc)
         sys.stdout = cached
