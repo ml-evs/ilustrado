@@ -2,4 +2,4 @@ numpy>=1.10
 scipy>=0.18
 scikit-learn>=0.18
 periodictable>=1.4
-git+https://bitbucket.org/ml-evs/matador@develop#egg=matador
+git://bitbucket.org/ml-evs/matador@develop#egg=matador

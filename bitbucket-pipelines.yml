@@ -10,6 +10,7 @@ pipelines:
   default:
     - step:
         script:
+          - pip install -r requirements.txt
           - pip install .
           - pip install .[test]
           - py.test --cov-config .coveragerc --cov=ilustrado
