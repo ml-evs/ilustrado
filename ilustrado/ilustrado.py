@@ -5,12 +5,10 @@ import subprocess as sp
 import logging
 import glob
 import shutil
-from os import listdir, makedirs, remove
-from os.path import isfile
-from time import sleep
+import os
+import time
 from traceback import print_exc
 from json import dumps, dump
-from sys import exit
 from copy import deepcopy, copy
 
 # external libraries
@@ -18,6 +16,7 @@ import numpy as np
 from pkg_resources import require
 
 # matador modules
+import matador.compute
 from matador.scrapers.castep_scrapers import (
     res2dict,
     castep2dict,
@@ -34,11 +33,15 @@ from matador.hull import QueryConvexHull
 from .adapt import adapt
 from .generation import Generation
 from .fitness import FitnessCalculator
-from .util import strip_useless, LOG
+from .util import strip_useless, LOG, NewbornProcess
 
 __version__ = require("ilustrado")[0].version
 
 
+# As this class has many settings that are hacked directly into __dict__, disable these warnings.
+# pylint: disable=access-member-before-definition
+# pylint: disable=attribute-defined-outside-init
+# pylint: disable bad-continuation
 class ArtificialSelector:
     """ ArtificialSelector takes an initial gene pool
     and applies a genetic algorithm to optimise some
@@ -166,7 +169,7 @@ class ArtificialSelector:
         print("\n" + splash_screen)
         print("\033[0m")
 
-        print("Loading harsh realities of life...", end=" ")
+        print("Loading harsh realities of life...", end="")
         # post-load checks
         if self.relaxer_params is None:
             self.relaxer_params = dict()
@@ -183,15 +186,51 @@ class ArtificialSelector:
         if self.compute_mode not in ["slurm", "direct"]:
             raise RuntimeError("`compute_mode` must be one of `slurm`, `direct`.")
 
-        if self.compute_mode is "slurm":
-            assert isinstance(self.walltime_hrs, int)
-            assert self.walltime_hrs > 0
-            assert isinstance(self.max_num_nodes, int)
-            assert self.max_num_nodes > 0
-            assert isinstance(self.slurm_template, str)
-            assert isfile(self.slurm_template)
+        if self.compute_mode == "slurm":
+            errors = []
+            if not isinstance(self.walltime_hrs, int):
+                errors.append(
+                    "`walltime_hrs` specified incorrectly {}".format(self.walltime_hrs)
+                )
+            elif not self.walltime_hrs > 0:
+                errors.append(
+                    "`walltime_hrs` specified incorrectly {}".format(self.walltime_hrs)
+                )
+            if not isinstance(self.max_num_nodes, int):
+                errors.append(
+                    "`max_num_nodes` specified incorrectly {}".format(
+                        self.max_num_nodes
+                    )
+                )
+            elif not self.max_num_nodes > 0:
+                errors.append(
+                    "`max_num_nodes` specified incorrectly {}".format(
+                        self.max_num_nodes
+                    )
+                )
+            if not isinstance(self.slurm_template, str):
+                errors.append(
+                    "`slurm_template` must be a valid path, not {}".format(
+                        self.slurm_template
+                    )
+                )
+            elif not os.path.isfile(self.slurm_template):
+                errors.append(
+                    "`slurm_template` file {} does not exist".format(
+                        self.slurm_template
+                    )
+                )
 
-        elif self.compute_mode is "direct":
+            if errors:
+                raise RuntimeError(
+                    "Invalid specification for `compute_mode='slurm'`, errors: \n{}".format(
+                        "\n".join(errors)
+                    )
+                )
+
+            self.slurm_dict = matador.compute.slurm.get_slurm_env()
+
+        if self.compute_mode == "direct":
             if self.nodes is not None:
                 if self.nprocs != len(self.nodes):
                     logging.warning(
@@ -207,14 +246,35 @@ class ArtificialSelector:
         self.num_elite = int(self.elitism * self.num_survivors)
         self.num_accepted = self.num_survivors - self.num_elite
         self.max_attempts = self.failure_ratio * self.population
-        assert (
-            self.num_survivors < self.population + self.num_elite
-        ), "Survivors > population!"
-        assert self.num_accepted < self.population, "Accepted > population!"
+
+        if self.num_survivors > self.population + self.num_elite:
+            raise RuntimeError(
+                "More survivors than total population: {} vs {}".format(
+                    self.num_survivors, self.population + self.num_elite
+                )
+            )
+
+        if self.num_accepted > self.population:
+            raise RuntimeError(
+                "More accepted than total population: {} vs {}".format(
+                    self.num_accepted, self.population + self.num_elite
+                )
+            )
+
         if self.mutations is not None and isinstance(self.mutations, str):
             self.mutations = [self.mutations]
-        assert isinstance(self.max_num_mutations, int)
-        assert isinstance(self.max_num_atoms, int)
+
+        if not isinstance(self.max_num_mutations, int) and self.max_num_mutations < 0:
+            raise RuntimeError(
+                "`max_num_mutations` must be >= 0, not {}".format(
+                    self.max_num_mutations
+                )
+            )
+
+        if not isinstance(self.max_num_atoms, int) and self.max_num_atoms < 1:
+            raise RuntimeError(
+                "`max_num_atoms` must be >= 1, not {}".format(self.max_num_atoms)
+            )
 
         # recover from specified run
         if self.recover_from is not None:
@@ -224,10 +284,10 @@ class ArtificialSelector:
         else:
             gen0_files = glob.glob("*gen0.json")
             if len(gen0_files) > 1:
-                exit(
+                raise SystemExit(
                     "Several incomplete runs found in this folder, please tidy up before re-running."
                 )
-            elif len(gen0_files) == 1:
+            if len(gen0_files) == 1:
                 self.run_hash = gen0_files[0].split("/")[-1].replace("-gen0.json", "")
                 self.recover_from = self.run_hash
             else:
@@ -236,40 +296,38 @@ class ArtificialSelector:
         # set up logging
         numeric_loglevel = getattr(logging, self.loglevel.upper(), None)
         if not isinstance(numeric_loglevel, int):
-            exit(
+            raise SystemExit(
                 self.loglevel,
                 "is an invalid log level, please use either `info`, `debug` or `warning`.",
             )
         file_handler = logging.FileHandler(self.run_hash + ".log", mode="w")
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(numeric_loglevel)
         file_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(levelname)8s: %(message)s")
+            logging.Formatter("%(asctime)s - %(name)s | %(levelname)8s: %(message)s")
         )
-
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(numeric_loglevel)
-        stream_handler.setFormatter(
-            logging.Formatter("%(asctime)s - %(levelname)8s: %(message)s")
-        )
-
         LOG.addHandler(file_handler)
-        LOG.addHandler(stream_handler)
 
         LOG.info("Starting up ilustrado {}".format(__version__))
 
         # initialise fitness calculator
         if self.fitness_metric == "hull" and self.hull is None:
-            if self.res_path is not None and isfile(self.res_path):
+            if self.res_path is not None and os.path.isfile(self.res_path):
                 res_files = glob.glob("{}/*.res".format(self.res_path))
-                if len(res_files) == 0:
-                    exit("No structures found in {}".format(self.res_path))
+                if not res_files:
+                    raise SystemExit("No structures found in {}".format(self.res_path))
                 self.cursor = []
                 for res in res_files:
                     self.cursor.append(res2dict(res))
                 self.hull = QueryConvexHull(cursor=self.cursor)
-            exit("Need to pass a QueryConvexHull object to use hull distance metric.")
+            raise SystemExit(
+                "Need to pass a QueryConvexHull object to use hull distance metric."
+            )
         if self.fitness_metric in ["dummy", "hull_test"]:
             self.testing = True
+
+        if self.testing and self.compute_mode == "slurm":
+            raise SystemExit("Please use `compute_mode=direct` for testing.")
+
         print("Done!")
         self.fitness_calculator = FitnessCalculator(
             fitness_metric=self.fitness_metric,
@@ -285,7 +343,7 @@ class ArtificialSelector:
             PDFFactory(self.hull.cursor)
             self.extra_pdfs = [doc["pdf"] for doc in self.hull.cursor]
             # remove pdf object from cursor so generation can be serialized
-            for ind, doc in enumerate(self.hull.cursor):
+            for ind, _ in enumerate(self.hull.cursor):
                 del self.hull.cursor[ind]["pdf"]
         else:
             self.extra_pdfs = None
@@ -308,18 +366,25 @@ class ArtificialSelector:
         # read parameters for relaxation from seed files
         if self.seed is not None:
             seed = self.seed
+            errors = []
             self.cell_dict, success_cell = cell2dict(seed, db=False)
-            if not success_cell:
-                print(self.cell_dict)
-                exit("Failed to read cell file.")
             self.param_dict, success_param = param2dict(seed, db=False)
+            if not success_cell:
+                errors.append("Failed to read cell file: {}".format(self.cell_dict))
             if not success_param:
-                print(self.param_dict)
-                exit("Failed to read param file.")
+                errors.append("Failed to read param file: {}".format(self.param_dict))
+            if errors:
+                raise RuntimeError("{}".format(errors.join("\n")))
+
         elif not self.testing:
-            exit("Not in testing mode, and failed to provide seed... exiting.")
+            raise SystemExit(
+                "Not in testing mode and failed to provide seed... exiting."
+            )
         else:
             self.seed = "ga_test"
+            self.cell_dict = {}
+            self.param_dict = {}
+
         print("Done!\n")
         LOG.debug("Successfully initialised cell and param files.")
 
@@ -329,11 +394,11 @@ class ArtificialSelector:
         if self.debug:
             print(self.nodes)
         if self.nodes is not None:
-            LOG.debug("Running on nodes: {}".format(" ".join(self.nodes)))
+            LOG.info("Running on nodes: {}".format(" ".join(self.nodes)))
         elif self.compute_mode == "slurm":
-            LOG.debug("Running through SLURM queue")
+            LOG.info("Running through SLURM queue")
         else:
-            LOG.debug("Running on local machine")
+            LOG.info("Running on localhost only")
 
         if self.debug:
             print(
@@ -376,7 +441,7 @@ class ArtificialSelector:
 
         if len(self.next_gen) < self.population:
             LOG.warning("Next gen is smaller than desired population.")
-        assert len(self.next_gen) >= self.population
+        # assert len(self.next_gen) >= self.population
 
         self.next_gen.rank()
         LOG.info("Ranked structures in generation {}".format(len(self.generations)))
@@ -421,10 +486,10 @@ class ArtificialSelector:
         LOG.info(entry)
         print(entry)
         fname = "{}-genunrelaxed.json".format(self.run_hash)
-        if isfile(fname):
+        if os.path.isfile(fname):
             LOG.info("Found existing generation to be relaxed...")
             # load the unrelaxed structures into a dummy generation
-            assert isfile(fname)
+            assert os.path.isfile(fname)
             unrelaxed_gen = Generation(
                 self.run_hash,
                 len(self.generations),
@@ -435,9 +500,9 @@ class ArtificialSelector:
             )
             # check to see which unrelaxed structures completed successfully
             LOG.info("Scanning for completed relaxations...")
-            for ind, newborn in enumerate(unrelaxed_gen):
+            for _, newborn in enumerate(unrelaxed_gen):
                 completed_filename = "completed/{}.castep".format(newborn["source"][0])
-                if isfile(completed_filename):
+                if os.path.isfile(completed_filename):
                     doc, s = castep2dict(completed_filename, db=True)
                     # if all was a success, then "birth" the structure, after checking for uniqueness
                     if s and isinstance(doc, dict):
@@ -455,11 +520,8 @@ class ArtificialSelector:
             )
             if len(self.next_gen) < self.population:
                 LOG.info("Initialising new relaxation jobs...")
-                import matador.compute.slurm
-                from matador.compute import reset_job_folder_and_count_remaining
 
-                slurm_dict = matador.compute.slurm.get_slurm_env(fail_loudly=True)
-                num_remaining = reset_job_folder_and_count_remaining()
+                num_remaining = matador.compute.reset_job_folder()
 
                 # check if we can even finish this generation
                 if num_remaining < self.population - len(self.next_gen):
@@ -469,7 +531,7 @@ class ArtificialSelector:
                     LOG.warning(
                         "Consider restarting with a larger allowed failure_ratio."
                     )
-                    exit(
+                    raise SystemExit(
                         "Failed to return enough successful structures to continue, exiting..."
                     )
 
@@ -478,19 +540,18 @@ class ArtificialSelector:
                     LOG.info("Adjusted max num nodes to {}".format(self.max_num_nodes))
                     self.max_num_nodes = self.population - len(self.next_gen)
 
-                self.slurm_submit_relaxations_and_monitor(slurm_dict)
+                self.slurm_submit_relaxations_and_monitor(self.slurm_dict)
                 LOG.info("Exiting monitor...")
                 exit(0)
 
             # otherwise, remove unfinished structures from job file and release control of this generation
             else:
                 LOG.info("Found enough structures to continue!".format())
-                completed_filename = "completed/{}.castep".format(newborn["source"][0])
                 count = 0
                 for doc in unrelaxed_gen:
                     structure = doc["source"][0] + ".res"
-                    if isfile(structure):
-                        remove(structure)
+                    if os.path.isfile(structure):
+                        os.remove(structure)
                         count += 1
                 LOG.info("Removed {} structures from job folder.".format(count))
                 return
@@ -498,36 +559,26 @@ class ArtificialSelector:
         # otherwise, generate a new unrelaxed generation and submit
         else:
             LOG.info("Initialising new generation...")
-            import matador.compute.slurm
-
-            slurm_dict = matador.compute.slurm.get_slurm_env(fail_loudly=True)
             self.write_unrelaxed_generation()
-            self.slurm_submit_relaxations_and_monitor(slurm_dict)
+            self.slurm_submit_relaxations_and_monitor(self.slurm_dict)
             LOG.info("Exiting monitor...")
             exit(0)
 
-    def slurm_submit_relaxations_and_monitor(self, slurm_dict):
+    def slurm_submit_relaxations_and_monitor(self):
         """ Prepare and submit the appropriate slurm files.
 
-        Parameters:
-            slurm_dict (dict): dict containing SLURM environment variables.
-
         """
-        # prepare script to relax this generation
-        import matador.compute.slurm
-
         LOG.info("Preparing to submit slurm scripts...")
         relax_fname = "{}_relax.job".format(self.run_hash)
         # override jobname with this run's hash to allow for selective job killing
-        slurm_dict["SLURM_JOB_NAME"] = self.run_hash
+        self.slurm_dict["SLURM_JOB_NAME"] = self.run_hash
         compute_string = "run3 {}".format(self.seed)
         matador.compute.slurm.write_slurm_submission_script(
             relax_fname,
-            slurm_dict,
+            self.slurm_dict,
             compute_string,
             self.walltime_hrs,
             template=self.slurm_template,
-            num_nodes=1,
         )
         if self.max_num_nodes > self.max_attempts:
             self.max_num_nodes = self.max_attempts
@@ -540,11 +591,10 @@ class ArtificialSelector:
         )
         matador.compute.slurm.write_slurm_submission_script(
             monitor_fname,
-            slurm_dict,
+            self.slurm_dict,
             compute_string,
             1,
             template=self.slurm_template,
-            num_nodes=1,
         )
         # submit jobs, if any exceptions, cancel all jobs
         try:
@@ -556,18 +606,19 @@ class ArtificialSelector:
                 monitor_fname, depend_on_job=array_job_id
             )
             LOG.info("Submitted monitor job: {}".format(monitor_job_id))
-        except:
-            LOG.error("Something went wrong, trying to cancel all jobs.")
+        except Exception as exc:
+            LOG.error("Something went wrong, trying to cancel all jobs: {}".format(exc))
             output = matador.compute.slurm.scancel_all_matching_jobs(name=self.run_hash)
             LOG.error("scancel output: {}".format(output))
-            exit("Something went wrong, please check the log file.")
+            raise SystemExit("Something went wrong, please check the log file.")
 
     def continuous_birth(self):
         """ Create new generation and relax "as they come", filling the compute
         resources allocated.
+
         """
+
         newborns = []
-        # procs is a list of tuples [(newborn_id, node, proc), ...]
         procs = []
         # queues is a list of mp.Queues where return values will end up
         queues = []
@@ -593,8 +644,8 @@ class ArtificialSelector:
         )
         print(89 * "─")
         # print any recovered structures that already exist
-        if len(self.next_gen) > 0:
-            for ind, structure in enumerate(self.next_gen):
+        if self.next_gen:
+            for _, structure in enumerate(self.next_gen):
                 print(
                     "{:^25} {:^10} {:^10} {:^10} {:^30}".format(
                         structure["source"][0],
@@ -615,27 +666,7 @@ class ArtificialSelector:
                     finished = True
                     # while there are still processes running, try to kill them with kill files
                     # that should end the job at the completion of the next CASTEP run
-                    kill_attempts = 0
-                    while len(procs) > 0 and kill_attempts < 5:
-                        for ind, proc in enumerate(procs):
-                            # create kill file so that matador will stop next finished CASTEP
-                            with open(
-                                "{}.kill".format(newborns[proc[0]]["source"][0]), "w"
-                            ):
-                                pass
-                            # wait 1 minute for CASTEP run
-                            if proc[2].join(timeout=60) is not None:
-                                result = queues[ind].get(timeout=60)
-                                if isinstance(result, dict):
-                                    self.scrape_result(
-                                        result, proc=proc, newborns=newborns
-                                    )
-                                del procs[ind]
-                            kill_attempts += 1
-                    if kill_attempts >= 5:
-                        for ind, proc in enumerate(procs):
-                            proc[2].terminate()
-                            del procs[ind]
+                    self._kill_all_gently(procs, newborns, queues)
 
                 # are we using all nodes? if not, start some processes
                 elif len(procs) < self.nprocs and len(self.next_gen) < self.population:
@@ -651,7 +682,9 @@ class ArtificialSelector:
                     if self.emt:
                         from ilustrado.util import AseRelaxation
 
-                        relaxer = AseRelaxation(newborns[-1])
+                        queues.append(mp.Queue())
+                        relaxer = AseRelaxation(newborns[-1], queues[-1])
+
                     else:
                         if self.testing:
                             from ilustrado.util import FakeFullRelaxer as FullRelaxer
@@ -676,9 +709,14 @@ class ArtificialSelector:
                         )
                     # store proc object with structure ID, node name, output queue and number of cores
                     procs.append(
-                        (newborn_id, node, mp.Process(target=relaxer.relax), ncores)
+                        NewbornProcess(
+                            newborn_id,
+                            node,
+                            mp.Process(target=relaxer.relax),
+                            ncores=ncores,
+                        )
                     )
-                    procs[-1][2].start()
+                    procs[-1].process.start()
                     LOG.info(
                         "Initialised relaxation for newborn {} on node {} with {} cores.".format(
                             ", ".join(newborns[-1]["source"]), node, ncores
@@ -686,11 +724,12 @@ class ArtificialSelector:
                     )
 
                 # are we using all nodes? if so, are they all still running?
-                elif len(procs) == self.nprocs and all(
-                    [proc[2].is_alive() for proc in procs]
+                elif (
+                    all([proc.process.is_alive() for proc in procs])
+                    and len(procs) == self.nprocs
                 ):
-                    # poll processes every 10 seconds
-                    sleep(10)
+                    # poll processes every second
+                    time.sleep(1)
                 # so we were using all nodes, but some have died...
                 else:
                     LOG.debug("Suspected at least one dead node")
@@ -698,59 +737,69 @@ class ArtificialSelector:
                     # delete them so we're no longer using all nodes
                     found_node = False
                     for ind, proc in enumerate(procs):
-                        if not proc[2].is_alive():
-                            LOG.debug("Found dead node {}".format(proc[1]))
+                        if not proc.process.is_alive():
+                            LOG.debug("Found dead node {}".format(proc.node))
                             try:
                                 result = queues[ind].get(timeout=60)
-                            except:
+                            except Exception:
                                 result = False
                                 LOG.warning(
                                     "Node {} failed to write to queue for newborn {}".format(
-                                        proc[1], ", ".join(newborns[proc[0]]["source"])
+                                        proc.node,
+                                        ", ".join(newborns[proc.newborn_id]["source"]),
                                     )
                                 )
                             if isinstance(result, dict):
                                 self.scrape_result(result, proc=proc, newborns=newborns)
                             try:
-                                procs[ind][2].join(timeout=10)
+                                procs[ind].process.join(timeout=10)
                                 LOG.debug(
-                                    "Process {} on node {} died gracefully.".format(
-                                        proc[0], proc[1]
+                                    "Process {proc.newborn_id} on node {proc.node} died gracefully.".format(
+                                        proc=proc
                                     )
                                 )
-                            except:
+                            except Exception:
                                 LOG.warning(
-                                    "Process {} on node {} has not died gracefully.".format(
-                                        proc[0], proc[1]
+                                    "Process {proc.newborn_id} on node {proc.node} has not died gracefully.".format(
+                                        proc=proc
                                     )
                                 )
-                                procs[ind][2].terminate()
+                                procs[ind].process.terminate()
 
                                 LOG.warning(
-                                    "Process {} on node {} terminated forcefully.".format(
-                                        proc[0], proc[1]
+                                    "Process {proc.newborn_id} on node {proc.node} terminated forcefully.".format(
+                                        proc=proc
                                     )
                                 )
                             if result is not False:
-                                free_nodes.append(proc[1])
-                                free_cores.append(proc[3])
+                                free_nodes.append(proc.newborn_id)
+                                free_cores.append(proc.ncores)
                             del procs[ind]
                             del queues[ind]
                             attempts += 1
                             found_node = True
-                            # break so that sometimes we skip some cycles of the while loop,
-                            # but don't end up oversubmitting
                             break
-                    if not found_node:
-                        sleep(10)
-        except:
+                        # new_free_nodes, new_free_cores, found_node, extra_attempts = self._collect_from_nodes(
+                        # procs, newborns, queues
+                        # )
+                        # attempts += extra_attempts
+                        # if new_free_nodes:
+                        # free_nodes.append(new_free_nodes)
+                        # free_cores.append(new_free_cores)
+
+                        if not found_node:
+                            time.sleep(10)
+
+                        break
+
+        except Exception as exc:
             LOG.warning("Something has gone terribly wrong...")
             LOG.error("Exception caught:", exc_info=True)
             print_exc()
             # clean up on error/interrupt
             if len(procs) > 1:
                 self.kill_all(procs)
-            raise SystemExit
+            raise exc
 
         LOG.info("No longer breeding structures in this generation.")
         # clean up at end either way
@@ -758,8 +807,7 @@ class ArtificialSelector:
             LOG.info(
                 "Trying to kill {} on {} processes.".format(self.executable, len(procs))
             )
-            for proc in procs:
-                self.kill_all(procs)
+            self.kill_all(procs)
 
         if attempts >= self.max_attempts:
             LOG.warning("Failed to return enough successful structures to continue...")
@@ -825,10 +873,10 @@ class ArtificialSelector:
         # remove interim dump file and create new ones for populace and bourgeoisie
         self.generations[-1].dump(len(self.generations) - 1)
         self.generations[-1].dump_bourgeoisie(len(self.generations) - 1)
-        if isfile("{}-gencurrent.json".format(self.run_hash)):
-            remove("{}-gencurrent.json".format(self.run_hash))
-        if isfile("{}-genunrelaxed.json".format(self.run_hash)):
-            remove("{}-genunrelaxed.json".format(self.run_hash))
+        if os.path.isfile("{}-gencurrent.json".format(self.run_hash)):
+            os.remove("{}-gencurrent.json".format(self.run_hash))
+        if os.path.isfile("{}-genunrelaxed.json".format(self.run_hash)):
+            os.remove("{}-genunrelaxed.json".format(self.run_hash))
         LOG.info(
             "Dumped generation file for generation {}".format(len(self.generations) - 1)
         )
@@ -858,7 +906,7 @@ class ArtificialSelector:
             debug=self.debug,
         )
         newborn_source_id = len(self.next_gen)
-        if self.compute_mode is "direct":
+        if self.compute_mode == "direct":
             while (
                 "{}-GA-{}-{}x{}".format(
                     self.seed, self.run_hash, len(self.generations), newborn_source_id
@@ -907,17 +955,17 @@ class ArtificialSelector:
             if proc is not None:
                 LOG.debug(
                     "Newborn {} successfully optimised".format(
-                        ", ".join(newborns[proc[0]]["source"])
+                        ", ".join(newborns[proc.newborn_id]["source"])
                     )
                 )
                 if result.get("parents") is None:
                     LOG.warning(
                         "Failed to get parents for newborn {}.".format(
-                            ", ".join(newborns[proc[0]]["source"])
+                            ", ".join(newborns[proc.newborn_id]["source"])
                         )
                     )
-                    result["parents"] = newborns[proc[0]]["parents"]
-                    result["mutations"] = newborns[proc[0]]["mutations"]
+                    result["parents"] = newborns[proc.newborn_id]["parents"]
+                    result["mutations"] = newborns[proc.newborn_id]["mutations"]
 
             result = strip_useless(result)
             dupe = False
@@ -928,7 +976,7 @@ class ArtificialSelector:
                     if proc is not None:
                         LOG.debug(
                             "Newborn {} is a duplicate and will not be included.".format(
-                                ", ".join(newborns[proc[0]]["source"])
+                                ", ".join(newborns[proc.newborn_id]["source"])
                             )
                         )
                     with open(self.run_hash + "-dupe.json", "a") as f:
@@ -938,7 +986,7 @@ class ArtificialSelector:
                 if proc is not None:
                     LOG.info(
                         "Newborn {} added to next generation.".format(
-                            ", ".join(newborns[proc[0]]["source"])
+                            ", ".join(newborns[proc.newborn_id]["source"])
                         )
                     )
                 LOG.info("Current generation size: {}".format(len(self.next_gen)))
@@ -963,28 +1011,27 @@ class ArtificialSelector:
         """ Loop over processes and kill them all.
 
         Parameters:
-
-            procs (list(tuple)): list of processes in form documented above.
+            procs (list): list of :obj:`NewbornProcess` in form documented above.
 
         """
         for proc in procs:
             if self.nodes is not None:
                 sp.run(
-                    ["ssh", proc[1], "pkill {}".format(self.executable)],
+                    ["ssh", proc.node, "pkill {}".format(self.executable)],
                     timeout=15,
                     stdout=sp.DEVNULL,
                     shell=False,
                 )
-            proc[2].terminate()
+            proc.process.terminate()
 
     def recover(self):
         """ Attempt to recover previous generations from files in cwd
         named '<run_hash>_gen{}.json'.format(gen_idx).
         """
-        if not isfile(("{}-gen0.json").format(self.run_hash)):
+        if not os.path.isfile(("{}-gen0.json").format(self.run_hash)):
             exit("Failed to load run, files missing for {}".format(self.run_hash))
         if (
-            isfile(("{}-gencurrent.json").format(self.run_hash))
+            os.path.isfile(("{}-gencurrent.json").format(self.run_hash))
             and self.compute_mode != "slurm"
         ):
             incomplete = True
@@ -993,7 +1040,7 @@ class ArtificialSelector:
             incomplete = False
         try:
             i = 0
-            while isfile("{}-gen{}.json".format(self.run_hash, i)):
+            while os.path.isfile("{}-gen{}.json".format(self.run_hash, i)):
                 LOG.info(
                     "Trying to load generation {} from run {}.".format(i, self.run_hash)
                 )
@@ -1016,14 +1063,18 @@ class ArtificialSelector:
                 i += 1
             print("Recovered from run {}".format(self.run_hash))
             LOG.info("Successfully loaded run {}.".format(self.run_hash))
-        except:
+
+        except Exception:
             print_exc()
             LOG.error(
                 "Something went wrong when reloading run {}".format(self.run_hash)
             )
             exit("Something went wrong when reloading run {}".format(self.run_hash))
-        assert len(self.generations) > 0
-        for i in range(len(self.generations)):
+
+        if not self.generations:
+            raise SystemExit("No generations found!")
+
+        for i, _ in enumerate(self.generations):
             if not self.testing:
                 if i != 0:
                     removed = self.generations[i].clean()
@@ -1055,7 +1106,7 @@ class ArtificialSelector:
                 )
             else:
                 bourge_fname = "{}-gen{}-bourgeoisie.json".format(self.run_hash, i)
-                if isfile(bourge_fname):
+                if os.path.isfile(bourge_fname):
                     self.generations[i].load_bourgeoisie(bourge_fname)
                 else:
                     self.generations[i].set_bourgeoisie(
@@ -1097,83 +1148,59 @@ class ArtificialSelector:
             gene_pool (list(dict)): list of structure with which to seed generation.
 
         """
-        from ilustrado.fitness import default_fitness_function
 
-        # if gene_pool is None, try to read from res files in cwd
-        if gene_pool is None:
-            res_list = []
-            for file in listdir("."):
-                if file.endswith(".res"):
-                    res_list.append(file)
-            self.gene_pool = []
-            for file in res_list:
-                doc, s = res2dict(file)
-        else:
-            # else, expect a list of matador documents
-            self.gene_pool = gene_pool
-            for ind, parent in enumerate(self.gene_pool):
-                if "_id" in parent:
-                    del self.gene_pool[ind]["_id"]
-                if "hull_distance" in self.gene_pool[ind]:
-                    self.gene_pool[ind]["raw_fitness"] = self.gene_pool[ind][
-                        "hull_distance"
-                    ]
-                else:
-                    self.gene_pool[ind][
-                        "hull_distance"
-                    ] = self.fitness_calculator.evaluate([self.gene_pool[ind]])
+        self.gene_pool = gene_pool
 
-                fitness = default_fitness_function(self.gene_pool[ind]["raw_fitness"])
-                self.gene_pool[ind]["fitness"] = fitness
+        for ind, parent in enumerate(self.gene_pool):
+            if "_id" in parent:
+                del self.gene_pool[ind]["_id"]
 
         # check gene pool is sensible
-        try:
-            assert isinstance(self.gene_pool, list)
-            assert isinstance(self.gene_pool[0], dict)
-            assert len(self.gene_pool) >= 1
-        except:
-            print_exc()
-            exit("Initial gene pool is not sensible, exiting...")
-
-        self.generations.append(
-            Generation(
-                self.run_hash,
-                0,
-                len(gene_pool),
-                len(gene_pool),
-                fitness_calculator=None,
-                populace=self.gene_pool,
+        errors = []
+        if not isinstance(self.gene_pool, list):
+            errors.append("Initial gene pool not a list: {}".format(self.gene_pool))
+        if not len(self.gene_pool) >= 1:
+            errors.append(
+                "Initial gene pool not long enough: {}".format(self.gene_pool)
             )
+        if errors:
+            raise SystemExit("Initial genee pool is not sensible: \n".join(errors))
+
+        generation = Generation(
+            self.run_hash,
+            0,
+            len(gene_pool),
+            len(gene_pool),
+            fitness_calculator=self.fitness_calculator,
+            populace=self.gene_pool,
         )
 
-        self.generations[-1].set_bourgeoisie(best_from_stoich=False)
+        generation.rank()
+        generation.set_bourgeoisie(best_from_stoich=False)
 
         LOG.info(
             "Successfully initialised generation 0 with {} members".format(
-                len(self.generations[-1])
+                len(generation)
             )
         )
-        self.generations[0].dump(0)
-        self.generations[0].dump_bourgeoisie(0)
+        generation.dump(0)
+        generation.dump_bourgeoisie(0)
 
-        print(self.generations[-1])
-        return
+        print(generation)
+        self.generations.append(generation)
 
     def is_newborn_dupe(self, newborn, extra_pdfs=None):
         """ Check each generation for a duplicate structure to the current newborn,
         using PDF calculator from matador.
 
         Parameters:
-
             newborn (dict): new structure to screen against the existing,
 
         Keyword Arguments:
-
             extra_pdfs (list(PDF)): any extra PDFs to compare to, e.g. other hull structures
                                     not used to seed any generation
 
         Returns:
-
             bool: True if duplicate, else False.
 
         """
@@ -1189,7 +1216,7 @@ class ArtificialSelector:
     def finalise_files_for_export(self):
         """ Move unique structures from gen1 onwards to folder "<run_hash>-results". """
         path = "{}-results".format(self.run_hash)
-        makedirs(path.format(self.run_hash), exist_ok=True)
+        os.makedirs(path.format(self.run_hash), exist_ok=True)
         cursor = [struc for gen in self.generations[1:] for struc in gen]
         uniq_inds, _, _, _, = get_uniq_cursor(cursor, projected=True)
         cursor = [cursor[ind] for ind in uniq_inds]
@@ -1207,8 +1234,36 @@ class ArtificialSelector:
                 doc2res(
                     doc, "{}/{}".format(path, source), overwrite=False, hash_dupe=False
                 )
-            if isfile("completed/{}".format(source.replace(".res", ".castep"))):
+            if os.path.isfile("completed/{}".format(source.replace(".res", ".castep"))):
                 shutil.copy(
                     "completed/{}".format(source.replace(".res", ".castep")),
                     "{}/{}".format(path, source.replace(".res", ".castep")),
                 )
+
+    def _kill_all_gently(self, procs, newborns, queues):
+        """ Kill all running processes.
+
+        Parameters:
+            procs (list): list of `:obj:NewbornProcess` objects.
+            newborns (list): list of corresponding structures.
+            queues (list): list of queues that were collecting results.
+
+        """
+        kill_attempts = 0
+        while procs and kill_attempts < 5:
+            for ind, proc in enumerate(procs):
+                # create kill file so that matador will stop next finished CASTEP
+                filename = "{}.kill".format(newborns[proc.newborn_id]["source"][0])
+                with open(filename, "w"):
+                    pass
+                # wait 1 minute for CASTEP run
+                if proc.process.join(timeout=60) is not None:
+                    result = queues[ind].get(timeout=60)
+                    if isinstance(result, dict):
+                        self.scrape_result(result, proc=proc, newborns=newborns)
+                    del procs[ind]
+                kill_attempts += 1
+        if kill_attempts >= 5:
+            for ind, proc in enumerate(procs):
+                proc.process.terminate()
+                del procs[ind]
