@@ -16,7 +16,7 @@ with open('requirements/requirements.txt', 'r') as f:
 requirements = [req for req in requirements if not req.startswith('git')]
 
 extra_requirements = dict()
-for subreq in ['docs', 'voronoi']:
+for subreq in ['docs', 'voronoi', 'test']:
     with open('requirements/{}_requirements.txt'.format(subreq), 'r') as f:
         extra_requirements[subreq] = [line.strip() for line in f.readlines()]
 

@@ -11,11 +11,8 @@ pipelines:
     - step:
         script:
           - pip install .
-          - py.test
+          - pip install .[test]
+          - py.test --cov-config .coveragerc --cov=ilustrado
+          - codecov --token=$CODECOV_TOKEN
         caches:
             - pip
-
-definitions: 
-  services: 
-    mongo: 
-      image: mongo

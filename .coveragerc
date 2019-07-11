@@ -1,0 +1,18 @@
+# .coveragerc to control coverage.py
+[run]
+branch = True
+concurrency = multiprocessing
+parallel = True
+
+[report]
+# Regexes for lines to exclude from consideration
+ignore_errors = True
+omit = 
+exclude_lines = 
+    pragma: no cover
+    if verbosity
+    if self.verbosity
+    if debug
+    if self.debug
+    if kwargs.get('verbosity')
+    if kwargs.get('debug')
