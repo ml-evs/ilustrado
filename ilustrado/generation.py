@@ -225,7 +225,8 @@ class Generation:
 
         Keyword Arguments:
             sim_tol (float): similarity tolerance to compare to
-            extra_pdfs (list(PDF)): list of extra pdfs to compare against
+            extra_pdfs (list(dict)): list of structures with extra pdfs
+                to compare against
 
         """
         new_pdf = PDF(doc, projected=True)
@@ -235,8 +236,9 @@ class Generation:
                 if dist < sim_tol:
                     return True
         if extra_pdfs is not None:
-            for ind, pdf in enumerate(extra_pdfs):
-                if sorted(doc["stoichiometry"]) == sorted(pdf.doc["stoichiometry"]):
+            for ind, _doc in enumerate(extra_pdfs):
+                pdf = _doc["pdf"]
+                if sorted(doc["stoichiometry"]) == sorted(_doc["stoichiometry"]):
                     dist = new_pdf.get_sim_distance(pdf, projected=pdf.projected)
                     if dist < sim_tol:
                         return True
