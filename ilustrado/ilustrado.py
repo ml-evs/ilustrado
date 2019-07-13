@@ -342,7 +342,7 @@ class ArtificialSelector:
         if self.check_dupes_hull:
             print("Computing extra PDFs from hull...")
             PDFFactory(self.hull.cursor)
-            self.extra_pdfs_cursor = deepcopy(self.hull.cursor)
+            self.extra_pdfs = deepcopy(self.hull.cursor)
             # remove pdf object from cursor so generation can be serialized
             for ind, _ in enumerate(self.hull.cursor):
                 del self.hull.cursor[ind]["pdf"]
