@@ -301,7 +301,7 @@ class ArtificialSelector:
                 self.loglevel,
                 "is an invalid log level, please use either `info`, `debug` or `warning`.",
             )
-        file_handler = logging.FileHandler(self.run_hash + ".log", mode="w")
+        file_handler = logging.FileHandler(self.run_hash + ".log", mode="a")
         file_handler.setLevel(numeric_loglevel)
         file_handler.setFormatter(
             logging.Formatter("%(asctime)s - %(name)s | %(levelname)8s: %(message)s")
