@@ -511,11 +511,14 @@ class ArtificialSelector:
                         doc = strip_useless(doc)
                         newborn.update(doc)
                         assert newborn.get("parents") is not None
+                        LOG.info('Scraping result for {}'.format(completed_filename))
                         self.scrape_result(newborn)
+                    else:
+                        LOG.warning('Failed to add {}: {}'.format(completed_filename, doc))
 
             # if there are not enough unrelaxed structures after that run, clean up then resubmit
             LOG.info(
-                "Found enough {} structures of target {}".format(
+                "Found {} structures out of target {}".format(
                     len(self.next_gen), self.population
                 )
             )
@@ -938,11 +941,9 @@ class ArtificialSelector:
         extra logging info will be found when running in `direct` mode.
 
         Parameters:
-
             result (dict): containing output from process
 
         Keyword Arguments:
-
             proc (tuple)   : standard process tuple from above,
             newborns (list): of new structures to append result to.
 
@@ -980,9 +981,12 @@ class ArtificialSelector:
                                 ", ".join(newborns[proc.newborn_id]["source"])
                             )
                         )
+                    else:
+                        LOG.debug("Newborn {} is a duplicate and will not be included.".format(
+                            result['source'][0]))
                     with open(self.run_hash + "-dupe.json", "a") as f:
                         dump(result, f, sort_keys=False, indent=2)
-            elif not dupe:
+            if not dupe:
                 self.next_gen.birth(result)
                 if proc is not None:
                     LOG.info(
@@ -990,6 +994,11 @@ class ArtificialSelector:
                             ", ".join(newborns[proc.newborn_id]["source"])
                         )
                     )
+                else:
+                    LOG.info(
+                        "Newborn {} added to next generation.".format(
+                            result["source"][0])
+                        )
                 LOG.info("Current generation size: {}".format(len(self.next_gen)))
                 self.next_gen.dump("current")
                 LOG.debug("Dumping json file for interim generation...")
