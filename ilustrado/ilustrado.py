@@ -27,7 +27,7 @@ from matador.scrapers.castep_scrapers import (
 from matador.export import generate_hash, doc2res
 from matador.fingerprints.similarity import get_uniq_cursor
 from matador.fingerprints.pdf import PDFFactory
-from matador.utils.chem_utils import get_formula_from_stoich
+from matador.utils.chem_utils import get_formula_from_stoich, get_root_source
 from matador.hull import QueryConvexHull
 
 # ilustrado modules
@@ -413,12 +413,11 @@ class ArtificialSelector:
             LOG.info("Successfully bred generation {}".format(len(self.generations)))
 
         assert len(self.generations) == self.num_generations
+        self.finalise_files_for_export()
         print("Reached target number of generations!")
         print("Completed GA!")
         LOG.info("Reached target number of generations!")
         LOG.info("Completed GA!")
-        if not self.testing:
-            self.finalise_files_for_export()
 
     def breed_generation(self):
         """ Build next generation from mutations/crossover of current and
@@ -484,8 +483,6 @@ class ArtificialSelector:
         """
 
         entry = "Beginning birthing of generation {}...".format(len(self.generations))
-        LOG.info(entry)
-        print(entry)
         fname = "{}-genunrelaxed.json".format(self.run_hash)
         if os.path.isfile(fname):
             LOG.info("Found existing generation to be relaxed...")
@@ -511,10 +508,12 @@ class ArtificialSelector:
                         doc = strip_useless(doc)
                         newborn.update(doc)
                         assert newborn.get("parents") is not None
-                        LOG.info('Scraping result for {}'.format(completed_filename))
+                        LOG.info("Scraping result for {}".format(completed_filename))
                         self.scrape_result(newborn)
                     else:
-                        LOG.warning('Failed to add {}: {}'.format(completed_filename, doc))
+                        LOG.warning(
+                            "Failed to add {}: {}".format(completed_filename, doc)
+                        )
 
             # if there are not enough unrelaxed structures after that run, clean up then resubmit
             LOG.info(
@@ -982,8 +981,11 @@ class ArtificialSelector:
                             )
                         )
                     else:
-                        LOG.debug("Newborn {} is a duplicate and will not be included.".format(
-                            result['source'][0]))
+                        LOG.debug(
+                            "Newborn {} is a duplicate and will not be included.".format(
+                                result["source"][0]
+                            )
+                        )
                     with open(self.run_hash + "-dupe.json", "a") as f:
                         dump(result, f, sort_keys=False, indent=2)
             if not dupe:
@@ -997,8 +999,9 @@ class ArtificialSelector:
                 else:
                     LOG.info(
                         "Newborn {} added to next generation.".format(
-                            result["source"][0])
+                            result["source"][0]
                         )
+                    )
                 LOG.info("Current generation size: {}".format(len(self.next_gen)))
                 self.next_gen.dump("current")
                 LOG.debug("Dumping json file for interim generation...")
@@ -1227,18 +1230,14 @@ class ArtificialSelector:
         """ Move unique structures from gen1 onwards to folder "<run_hash>-results". """
         path = "{}-results".format(self.run_hash)
         os.makedirs(path.format(self.run_hash), exist_ok=True)
+        LOG.info("Moving unique files to {}-results/...".format(self.run_hash))
         cursor = [struc for gen in self.generations[1:] for struc in gen]
         uniq_inds, _, _, _, = get_uniq_cursor(cursor, projected=True)
         cursor = [cursor[ind] for ind in uniq_inds]
         for doc in cursor:
-            source = [
-                src.replace(".castep", ".res")
-                for src in doc["source"]
-                if "-GA-" in src or src.endswith(".castep") or src.endswith(".res")
-            ]
-            source = source[0].split("/")[-1]
+            source = get_root_source(doc)
             if not source:
-                print("Issue writing {}".format(doc["source"]))
+                LOG.warning("Issue writing {}".format(doc["source"]))
                 continue
             else:
                 doc2res(
