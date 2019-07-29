@@ -5,9 +5,7 @@
 """
 
 import sys
-import os
 import logging
-from time import sleep
 
 import numpy as np
 from matador.compute import FullRelaxer
@@ -20,16 +18,13 @@ def strip_useless(doc, to_run=False):
     """ Strip useless information from a matador doc.
 
     Parameters:
-
         doc (dict): structure to strip information from.
 
     Arguments:
-
         to_run (bool): whether the structure needs to be rerun,
                        i.e. whether to delete data from previous run.
 
     Returns:
-
         dict: matador document stripped of useless keys
 
     """
@@ -98,6 +93,7 @@ class FakeFullRelaxer(FullRelaxer):
             array = np.random.rand(size, size)
             np.linalg.eig(array)
         self.structure["enthalpy_per_atom"] = -505 + np.random.rand()
+        self.structure["enthalpy"] = self.structure["enthalpy_per_atom"] * self.structure["num_atoms"]
         if np.random.rand() < 0.8:
             self.structure["optimised"] = True
         else:

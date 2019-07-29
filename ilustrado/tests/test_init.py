@@ -99,11 +99,17 @@ def hull_test(self):
 
     new_life.start()
 
+    self.assertTrue(os.path.isdir(new_life.run_hash + "-results"))
+    num_structures = len(glob.glob(new_life.run_hash + "-results/*.res"))
+    self.assertTrue(num_structures > 5)
+
 
 class MatadorHullUnitTest(unittest.TestCase):
     """ Tests matador hull init of ilustrado. """
 
     def setUp(self):
+        if os.path.isdir(TEST_DIR):
+            shutil.rmtree(TEST_DIR)
         os.makedirs(TEST_DIR, exist_ok=True)
         os.chdir(TEST_DIR)
 
