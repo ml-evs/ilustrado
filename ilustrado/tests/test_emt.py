@@ -73,7 +73,7 @@ def emt_relax():
         max_num_atoms=50,
         mutation_rate=0.5,
         crossover_rate=0.5,
-        num_generations=15,
+        num_generations=5,
         population=20,
         num_survivors=10,
         elitism=0.5,
