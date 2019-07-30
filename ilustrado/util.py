@@ -142,11 +142,12 @@ class AseRelaxation:
         except Exception:
             optimised = False
 
-        self.doc["optimised"] = optimised
+        self.doc["optimised"] = bool(optimised)
         self.doc["positions_frac"] = self.atoms.get_scaled_positions().tolist()
         self.doc["lattice_cart"] = self.atoms.cell.tolist()
-        self.doc["enthalpy_per_atom"] = self.calc.results["energy"] / len(
+        self.doc["enthalpy_per_atom"] = float(self.calc.results["energy"] / len(
             self.doc["atom_types"]
-        )
+        ))
+        self.doc["enthalpy"] = float(self.calc.results["energy"])
         self.queue.put(self.doc)
         sys.stdout = cached
