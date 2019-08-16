@@ -482,7 +482,7 @@ class ArtificialSelector:
 
         """
 
-        entry = "Beginning birthing of generation {}...".format(len(self.generations))
+        LOG.info("Beginning birthing of generation {}...".format(len(self.generations)))
         fname = "{}-genunrelaxed.json".format(self.run_hash)
         if os.path.isfile(fname):
             LOG.info("Found existing generation to be relaxed...")
@@ -727,10 +727,7 @@ class ArtificialSelector:
                     )
 
                 # are we using all nodes? if so, are they all still running?
-                elif (
-                    all([proc.process.is_alive() for proc in procs])
-                    and len(procs) == self.nprocs
-                ):
+                elif (all([proc.process.is_alive() for proc in procs]) and len(procs) == self.nprocs):
                     # poll processes every second
                     time.sleep(1)
                 # so we were using all nodes, but some have died...
@@ -744,7 +741,7 @@ class ArtificialSelector:
                             LOG.debug("Found dead node {}".format(proc.node))
                             try:
                                 result = queues[ind].get(timeout=60)
-                            except Exception:
+                            except mp.queue.Empty:
                                 result = False
                                 LOG.warning(
                                     "Node {} failed to write to queue for newborn {}".format(
@@ -754,6 +751,16 @@ class ArtificialSelector:
                                 )
                             if isinstance(result, dict):
                                 self.scrape_result(result, proc=proc, newborns=newborns)
+                            elif isinstance(result, Exception):
+                                LOG.warning(
+                                    "Node {} wrote error {} to queue for newborn {}".format(
+                                        proc.node,
+                                        result,
+                                        ", ".join(newborns[proc.newborn_id]["source"]),
+                                    )
+                                )
+                                result = False
+
                             try:
                                 procs[ind].process.join(timeout=10)
                                 LOG.debug(
@@ -774,21 +781,13 @@ class ArtificialSelector:
                                         proc=proc
                                     )
                                 )
-                            if result is not False:
-                                free_nodes.append(proc.newborn_id)
-                                free_cores.append(proc.ncores)
+                            free_nodes.append(proc.newborn_id)
+                            free_cores.append(proc.ncores)
                             del procs[ind]
                             del queues[ind]
                             attempts += 1
                             found_node = True
                             break
-                        # new_free_nodes, new_free_cores, found_node, extra_attempts = self._collect_from_nodes(
-                        # procs, newborns, queues
-                        # )
-                        # attempts += extra_attempts
-                        # if new_free_nodes:
-                        # free_nodes.append(new_free_nodes)
-                        # free_cores.append(new_free_cores)
 
                         if not found_node:
                             time.sleep(10)
@@ -951,6 +950,7 @@ class ArtificialSelector:
             if proc is not None:
                 print(proc)
             print(dumps(result, sort_keys=True))
+
         if result.get("optimised"):
             status = "Relaxed"
             if proc is not None:
@@ -1243,10 +1243,10 @@ class ArtificialSelector:
                 doc2res(
                     doc, "{}/{}".format(path, source), overwrite=False, hash_dupe=False
                 )
-            if os.path.isfile("completed/{}".format(source.replace(".res", ".castep"))):
+            if os.path.isfile("completed/{}.castep".format(source)):
                 shutil.copy(
-                    "completed/{}".format(source.replace(".res", ".castep")),
-                    "{}/{}".format(path, source.replace(".res", ".castep")),
+                    "completed/{}.castep".format(source),
+                    "{}/{}.castep".format(path, source),
                 )
 
     def _kill_all_gently(self, procs, newborns, queues):
