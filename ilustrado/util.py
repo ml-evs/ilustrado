@@ -6,6 +6,8 @@
 
 import sys
 import logging
+import pathlib
+import os
 
 import numpy as np
 from matador.compute import FullRelaxer
@@ -87,18 +89,26 @@ class FakeFullRelaxer(FullRelaxer):
         self.output_queue = kwargs["output_queue"]
 
     def relax(self):
-        fake_number_crunch = True
-        if fake_number_crunch:
-            size = np.random.randint(low=3, high=50)
-            array = np.random.rand(size, size)
-            np.linalg.eig(array)
-        self.structure["enthalpy_per_atom"] = -505 + np.random.rand()
-        self.structure["enthalpy"] = self.structure["enthalpy_per_atom"] * self.structure["num_atoms"]
-        if np.random.rand() < 0.8:
-            self.structure["optimised"] = True
-        else:
-            self.structure["optimised"] = False
-        self.output_queue.put(self.structure)
+        try:
+            fake_number_crunch = True
+            if fake_number_crunch:
+                size = np.random.randint(low=3, high=50)
+                array = np.random.rand(size, size)
+                np.linalg.eig(array)
+            self.structure["enthalpy_per_atom"] = -505 + np.random.rand()
+            self.structure["enthalpy"] = self.structure["enthalpy_per_atom"] * self.structure["num_atoms"]
+            if np.random.rand() < 0.8:
+                self.structure["optimised"] = True
+            elif np.random.rand() < 0.5:
+                raise RuntimeError('Throwing this error just to mix things up...')
+            else:
+                self.structure["optimised"] = False
+            if self.structure["optimised"]:
+                os.makedirs('completed', exist_ok=True)
+                pathlib.Path('completed/{}.castep'.format(self.structure['source'][0])).touch()
+            self.output_queue.put(self.structure)
+        except Exception as exc:
+            self.output_queue.put(exc)
 
 
 class NewbornProcess:

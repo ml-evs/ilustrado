@@ -105,7 +105,6 @@ class Generation:
             gen_suffix (str): typically gen<gen_number>.
 
         """
-        print(self.populace)
         with open("{}-gen{}.json".format(self.run_hash, gen_suffix), "w") as f:
             json.dump(self.populace, f, sort_keys=False, indent=2)
 

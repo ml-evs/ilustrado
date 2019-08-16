@@ -101,7 +101,9 @@ def hull_test(self):
 
     self.assertTrue(os.path.isdir(new_life.run_hash + "-results"))
     num_structures = len(glob.glob(new_life.run_hash + "-results/*.res"))
+    num_castep = len(glob.glob(new_life.run_hash + "-results/*.castep"))
     self.assertTrue(num_structures > 5)
+    self.assertTrue(num_castep > 5)
 
 
 class MatadorHullUnitTest(unittest.TestCase):
