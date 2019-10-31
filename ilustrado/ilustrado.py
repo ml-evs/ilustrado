@@ -229,7 +229,7 @@ class ArtificialSelector:
                     )
                 )
 
-            self.slurm_dict = matador.compute.slurm.get_slurm_env()
+            self.slurm_dict = matador.compute.queueing.get_queue_env('slurm')
 
         if self.compute_mode == "direct":
             if self.nodes is not None:
