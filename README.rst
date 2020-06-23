@@ -8,7 +8,7 @@ Summary
 
 ilustrado is a Python package that implements a highly-customisable massively-parallel genetic algorithm for *ab initio* crystal structure prediction (CSP), with a focus on mapping out compositional phase diagrams. The aim of ilustrado was to provide a method of extending CSP results generated with random structure searching (AIRSS) or extrapolating from known chemically-relevant systems (species-swapping/prototyping).
 
-The API is `fully-documented <http://ilustrado.readthedocs.io/en/latest/modules.html>`_ and the source code can be found on `BitBucket <https://bitbucket.org/ml-evs/ilustrado>`_. ilustrado makes extensive use of the `matador <https://matador-db.readthedocs.io>`_ API and interfaces with `CASTEP <http://www.castep.org/>`_ for DFT-level relaxations. Written by `Matthew Evans <http://ml-evs.science>`_ (me388@cam.ac.uk).
+The API is `fully-documented <http://ilustrado.readthedocs.io/en/latest/modules.html>`_ and the source code can be found on `GitHub <https://github.com/ml-evs/ilustrado>`_. ilustrado makes extensive use of the `matador <https://matador-db.readthedocs.io>`_ API and interfaces with `CASTEP <http://www.castep.org/>`_ for DFT-level relaxations. Written by `Matthew Evans <http://ml-evs.science>`_ (me388@cam.ac.uk).
 
 By default, fitnesses are evaluated as the distance from a binary or ternary convex hull that is passed as input. Duplicate structures are filtered out post-relaxation based on pair distribution function overlap. The standard mutation operators are implemented: cell and position noise, vacancies, and atom permutation and transmutation. Additionally a Voronoi-based mutation has been implemented:
 
@@ -37,12 +37,7 @@ New in v0.3b:
 - ``compute_mode='slurm'`` that makes use of array jobs for "infinite" horizontal scalability
 - improved documentation and examples
 
-License
---------
-
-matador is available under the `MIT License <https://bitbucket.org/ml-evs/matador/src/master/LICENSE>_`.
-
 .. |MIT License| image:: https://img.shields.io/badge/license-MIT-blue.svg
-   :target: https://bitbucket.org/ml-evs/ilustrado/src/master/LICENSE
+   :target: https://github.com/ml-evs/ilustrado/blob/master/LICENSE
 .. |Documentation Status| image:: https://readthedocs.org/projects/ilustrado/badge/?version=latest
    :target: https://ilustrado.readthedocs.io/en/latest/?badge=latest
