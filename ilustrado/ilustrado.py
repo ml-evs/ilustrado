@@ -269,6 +269,15 @@ class ArtificialSelector:
         if self.mutations is not None and isinstance(self.mutations, str):
             self.mutations = [self.mutations]
 
+        else:
+            self.mutations = ["permute_atoms", "random_strain", "nudge_positions", "vacancy", "transmute_atoms"]
+            try:
+                from VoronoiNetwork import Vornetclass
+                self.mutations.append("voronoi")
+            except ImportError:
+                LOG.warning("Disabling Voronoi mutation.")
+                pass
+
         if not isinstance(self.max_num_mutations, int) and self.max_num_mutations < 0:
             raise RuntimeError(
                 "`max_num_mutations` must be >= 0, not {}".format(
@@ -711,12 +720,12 @@ class ArtificialSelector:
 
                     else:
                         if self.testing:
-                            from ilustrado.util import FakeFullRelaxer as FullRelaxer
+                            from ilustrado.util import FakeComputeTask as ComputeTask
                         else:
-                            from matador.compute import FullRelaxer
+                            from matador.compute import ComputeTask
 
                         queues.append(mp.Queue())
-                        relaxer = FullRelaxer(
+                        relaxer = ComputeTask(
                             ncores=ncores,
                             nnodes=None,
                             node=node,
@@ -796,7 +805,7 @@ class ArtificialSelector:
                                     )
                                 )
                             if result is not False:
-                                free_nodes.append(proc.newborn_id)
+                                free_nodes.append(proc.node)
                                 free_cores.append(proc.ncores)
                             del procs[ind]
                             del queues[ind]

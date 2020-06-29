@@ -8,7 +8,7 @@ import sys
 import logging
 
 import numpy as np
-from matador.compute import FullRelaxer
+from matador.compute import ComputeTask
 
 LOG = logging.getLogger("ilustrado")
 LOG.setLevel(logging.DEBUG)
@@ -76,7 +76,7 @@ def strip_useless(doc, to_run=False):
     return stripped_doc
 
 
-class FakeFullRelaxer(FullRelaxer):
+class FakeComputeTask(ComputeTask):
     """ Fake Relaxer for testing, with same parameters as the real one
     from matador.compute.
 
