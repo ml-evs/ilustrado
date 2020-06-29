@@ -9,6 +9,7 @@ import logging
 
 import numpy as np
 from matador.compute import ComputeTask
+from matador.utils.cell_utils import cart2frac, cart2abc
 
 LOG = logging.getLogger("ilustrado")
 LOG.setLevel(logging.DEBUG)
@@ -114,11 +115,12 @@ class NewbornProcess:
 class AseRelaxation:
     """ Perform relaxation with ASE LJ or EMT. """
 
-    def __init__(self, doc, queue, pot_type="LJ"):
+    def __init__(self, doc, queue, pot_typ="EMT"):
         from copy import deepcopy
         from matador.utils.viz_utils import doc2ase
         from ase.calculators.lj import LennardJones
         from ase.calculators.emt import EMT
+        from ase.constraints import UnitCellFilter
 
         if pot_type == "LJ":
             self.calc = LennardJones()
@@ -128,6 +130,7 @@ class AseRelaxation:
         self.doc = deepcopy(doc)
         self.atoms = doc2ase(doc)
         self.atoms.set_calculator(self.calc)
+        self.ucf = UnitCellFilter(self.atoms)
         self.queue = queue
 
     def relax(self):
@@ -136,15 +139,17 @@ class AseRelaxation:
         cached = sys.__stdout__
         # sys.stdout = os.devnull
         try:
-            optimizer = LBFGS(self.atoms)
+            optimizer = LBFGS(self.ucf)
             optimizer.logfile = None
-            optimised = optimizer.run(steps=50)
+            optimised = optimizer.run(fmax=0.05, steps=100)
         except Exception:
             optimised = False
 
         self.doc["optimised"] = bool(optimised)
-        self.doc["positions_frac"] = self.atoms.get_scaled_positions().tolist()
-        self.doc["lattice_cart"] = self.atoms.cell.tolist()
+        self.doc["positions_abs"] = self.atoms.get_positions().tolist()
+        self.doc["lattice_cart"] = self.atoms.get_cell().tolist()
+        self.doc["lattice_abc"] = cart2abc(self.doc["lattice_cart"])
+        self.doc["positions_frac"] = cart2frac(self.doc["lattice_cart"], self.doc["positions_abs"])
         self.doc["enthalpy_per_atom"] = float(self.calc.results["energy"] / len(
             self.doc["atom_types"]
         ))
