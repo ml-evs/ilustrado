@@ -94,6 +94,7 @@ def adapt(
                     parent,
                     mutations=_mutations,
                     max_num_mutations=max_num_mutations,
+                    minsep_dict=minsep_dict,
                     debug=debug,
                 )
                 parents = [parent]

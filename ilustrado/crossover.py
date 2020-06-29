@@ -1,12 +1,13 @@
 # coding: utf-8
 """ This file implements crossover functionality. """
 from copy import deepcopy
+from functools import partial
 import numpy as np
 from matador.utils.chem_utils import get_stoich
 from matador.utils.cell_utils import create_simple_supercell, standardize_doc_cell
 
 
-def crossover(parents, method="random_slice", debug=False):
+def crossover(parents, method="random_slice", minsep_dict=None, debug=False):
     """ Attempt to create a child structure from two parents structures.
 
     Parameters:
@@ -22,6 +23,10 @@ def crossover(parents, method="random_slice", debug=False):
 
     if method == "random_slice":
         _crossover = random_slice
+    elif method == "ase_cut_and_splice":
+        if minsep_dict is None:
+            raise RuntimeError
+        _crossover = partial(ase_cut_and_splice, minsep_dict=minsep_dict)
 
     return _crossover(parents, debug=debug)
 
@@ -130,3 +135,33 @@ def random_slice(
     child["stoichiometry"] = get_stoich(child["atom_types"])
     child["num_atoms"] = len(child["atom_types"])
     return child
+
+
+def ase_cut_and_splice(parent_seeds, minsep_dict=None):
+    """ Simple cut-and-splice crossover of two parents.
+
+    The overall size of the child can vary between 0.5 and 1.5 the size of the
+    parent structures. Both parent structures are cut and spliced along the
+    same crystallographic axis.
+
+    Parameters:
+
+        parents (list(dict)) : parent structures to crossover,
+        standardize (bool)   : use spglib to standardize parents pre-crossover,
+        supercell (bool)     : make a random supercell to rescale parents,
+        shift (bool)         : randomly shift atoms in parents to unbias.
+
+    Returns:
+
+        dict: newborn structure from parents.
+
+    """
+    from ase.ga.bulk_crossovers import CutAndSplicePairing
+    from matador.utils.ase_utils import doc2ase, ase2dict
+
+    if minsep_dict is None:
+        raise RuntimeError('ASE crossover needs minsep_dict.')
+
+    parents = [doc2ase(doc) for doc in parent_seeds]
+    operator = CutAndSplicePairing(minsep_dict)
+    return ase2dict(operator.get_new_individual(parents))

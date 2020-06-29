@@ -16,7 +16,7 @@ from matador.plugins.voronoi_interface.voronoi_interface import get_voronoi_poin
 from .util import LOG
 
 
-def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
+def mutate(parent, mutations=None, max_num_mutations=2, debug=False, minsep_dict=None):
     """ Wrap _mutate to check for null/invalid mutations.
 
     Parameters:
