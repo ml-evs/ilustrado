@@ -188,8 +188,8 @@ class ArtificialSelector:
                 )
 
         # set up computing resource
-        if self.compute_mode not in ["slurm", "direct"]:
-            raise RuntimeError("`compute_mode` must be one of `slurm`, `direct`.")
+        if self.compute_mode not in ("slurm", "direct", "manual"):
+            raise RuntimeError("`compute_mode` must be one of `slurm`, `direct`, `manual`.")
 
         if self.compute_mode == "slurm":
             errors = []
@@ -446,7 +446,7 @@ class ArtificialSelector:
         # newborns is a list of structures, initially raw then relaxed
         if self.compute_mode == "direct":
             self.continuous_birth()
-        elif self.compute_mode == "slurm":
+        elif self.compute_mode in ("slurm", "manual"):
             self.batch_birth()
 
         if len(self.next_gen) < self.population:
@@ -509,21 +509,29 @@ class ArtificialSelector:
             # check to see which unrelaxed structures completed successfully
             LOG.info("Scanning for completed relaxations...")
             for _, newborn in enumerate(unrelaxed_gen):
-                completed_filename = "completed/{}.castep".format(newborn["source"][0])
-                if os.path.isfile(completed_filename):
-                    doc, s = castep2dict(completed_filename, db=True)
-                    # if all was a success, then "birth" the structure, after checking for uniqueness
-                    if s and isinstance(doc, dict):
-                        newborn = strip_useless(newborn)
-                        doc = strip_useless(doc)
-                        newborn.update(doc)
-                        assert newborn.get("parents") is not None
-                        LOG.info("Scraping result for {}".format(completed_filename))
-                        self.scrape_result(newborn)
-                    else:
-                        LOG.warning(
-                            "Failed to add {}: {}".format(completed_filename, doc)
-                        )
+                completed_castep_filename = "completed/{}.castep".format(newborn["source"][0])
+                completed_res_filename = "completed/{}.res".format(newborn["source"][0])
+                doc = None
+                s = None
+                if os.path.isfile(completed_castep_filename):
+                    doc, s = castep2dict(completed_res_filename, db=True)
+                elif os.path.isfile(completed_res_filename):
+                    doc, s = res2dict(completed_res_filename, db=True)
+                    # if we find a res file in a completed folder, assumed it was relaxed
+                    doc["optimised"] = True
+
+                # if all was a success, then "birth" the structure, after checking for uniqueness
+                if s and isinstance(doc, dict):
+                    newborn = strip_useless(newborn)
+                    doc = strip_useless(doc)
+                    newborn.update(doc)
+                    assert newborn.get("parents") is not None
+                    LOG.info("Scraping result for {}".format(newborn["source"][0]))
+                    self.scrape_result(newborn)
+                else:
+                    LOG.warning(
+                        "Failed to add {}, data found: {}".format(newborn["source"][0], doc)
+                    )
 
             # if there are not enough unrelaxed structures after that run, clean up then resubmit
             LOG.info(
@@ -548,12 +556,14 @@ class ArtificialSelector:
                         "Failed to return enough successful structures to continue, exiting..."
                     )
 
-                # adjust number of nodes so we don't get stuck in the queue
-                if self.max_num_nodes > num_remaining:
-                    LOG.info("Adjusted max num nodes to {}".format(self.max_num_nodes))
-                    self.max_num_nodes = self.population - len(self.next_gen)
+                if self.compute_mode == "slurm":
+                    # adjust number of nodes so we don't get stuck in the queue
+                    if self.max_num_nodes > num_remaining:
+                        LOG.info("Adjusted max num nodes to {}".format(self.max_num_nodes))
+                        self.max_num_nodes = self.population - len(self.next_gen)
 
-                self.slurm_submit_relaxations_and_monitor()
+                    self.slurm_submit_relaxations_and_monitor()
+
                 LOG.info("Exiting monitor...")
                 exit(0)
 
@@ -573,7 +583,8 @@ class ArtificialSelector:
         else:
             LOG.info("Initialising new generation...")
             self.write_unrelaxed_generation()
-            self.slurm_submit_relaxations_and_monitor()
+            if self.compute_mode == "slurm":
+                self.slurm_submit_relaxations_and_monitor()
             LOG.info("Exiting monitor...")
             exit(0)
 
