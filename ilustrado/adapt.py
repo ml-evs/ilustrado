@@ -104,6 +104,9 @@ def adapt(
                     structure_filter=structure_filter,
                     minsep_dict=minsep_dict,
                 )
+            # this will be raised if the mutation fails for a good reason
+            except RuntimeError:
+                valid_cell = False
             except Exception as oops:
                 if debug:
                     print_exc()
@@ -133,6 +136,8 @@ def adapt(
                     structure_filter=structure_filter,
                     minsep_dict=minsep_dict,
                 )
+            except RuntimeError:
+                valid_cell = False
             except Exception as oops:
                 if debug:
                     print_exc()
@@ -230,6 +235,7 @@ def check_feasible(
         if debug:
             print(message)
         return False
+
     # now check element-agnostic minseps
     if not minseps_feasible(mutant, minsep_dict=minsep_dict, debug=debug):
         return False
