@@ -145,7 +145,7 @@ def adapt(
                 valid_cell = False
         num_iter += 1
 
-    LOG.info("Initialised newborn after {} trials".format(num_iter))
+    LOG.debug("Initialised newborn after {} trials".format(num_iter))
     if num_iter == max_restarts:
         LOG.warning(
             "Max restarts reached in mutations, something has gone wrong... "
@@ -239,18 +239,12 @@ def check_feasible(
     # now check element-agnostic minseps
     if not minseps_feasible(mutant, minsep_dict=minsep_dict, debug=debug):
         return False
+
     # check all cell angles are between 60 and 120.
     if "lattice_abc" not in mutant:
         mutant["lattice_abc"] = cart2abc(mutant["lattice_cart"])
-    if all([angle < 30 for angle in mutant["lattice_abc"][1]]):
-        message = "Mutant with {} failed cell angle check.".format(
-            ", ".join(mutant["mutations"])
-        )
-        LOG.debug(message)
-        if debug:
-            print(message)
-            return False
-    if all([angle > 120 for angle in mutant["lattice_abc"][1]]):
+
+    if min(mutant["lattice_abc"][1]) < 30:
         message = "Mutant with {} failed cell angle check.".format(
             ", ".join(mutant["mutations"])
         )
@@ -258,6 +252,16 @@ def check_feasible(
         if debug:
             print(message)
         return False
+
+    if max(mutant["lattice_abc"][1]) > 120:
+        message = "Mutant with {} failed cell angle check.".format(
+            ", ".join(mutant["mutations"])
+        )
+        LOG.debug(message)
+        if debug:
+            print(message)
+        return False
+
     # check that we haven't deleted/transmuted all atoms of a certain type
     if len(set(mutant["atom_types"])) < len(set(parents[0]["atom_types"])):
         message = "Mutant with {} transmutation error.".format(
