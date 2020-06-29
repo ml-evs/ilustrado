@@ -324,7 +324,7 @@ class ArtificialSelector:
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setLevel(numeric_loglevel)
         stream_handler.setFormatter(
-            logging.Formatter("stdout %(asctime)s - %(name)s | %(levelname)8s: %(message)s")
+            logging.Formatter("%(asctime)s - %(name)s | %(levelname)8s: %(message)s")
         )
         LOG.addHandler(stream_handler)
 
