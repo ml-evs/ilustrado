@@ -48,7 +48,7 @@ def mutate(parent, mutations=None, max_num_mutations=2, debug=False):
     return mutant
 
 
-def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
+def _mutate(mutant, mutations, max_num_mutations=2, debug=False):
     """ Chooses a random number of mutations and applies them.
 
     Parameters:
@@ -59,16 +59,8 @@ def _mutate(mutant, mutations=None, max_num_mutations=2, debug=False):
         max_num_mutations (int) : maximum number of mutations to apply.
 
     """
-    if mutations is None:
-        possible_mutations = [
-            permute_atoms,
-            random_strain,
-            nudge_positions,
-            vacancy,
-            voronoi_shuffle,
-        ]
-    else:
-        possible_mutations = mutations
+    possible_mutations = mutations
+
     if max_num_mutations == 1:
         num_mutations = 1
     else:
@@ -97,7 +89,7 @@ def permute_atoms(mutant, debug=False):
         RuntimeError: if only one type of atom is present.
 
     """
-    num_atoms = mutant["num_atoms"]
+    num_atoms = len(mutant["atom_types"])
     initial_atoms = deepcopy(mutant["atom_types"])
     if len(set(initial_atoms)) == 1:
         raise RuntimeError("Could not apply permute_atoms as only one type.")
@@ -153,6 +145,9 @@ def vacancy(mutant, debug=False):
         mutant (dict): structure to mutate in-place.
 
     """
+    if mutant["num_atoms"] < 2:
+        raise RuntimeError("Cannot apply vacancy to cell with 1 atom.")
+
     vacancy_idx = np.random.randint(0, mutant["num_atoms"] - 1)
     if debug:
         print(
@@ -195,13 +190,17 @@ def voronoi_shuffle(
 
     if element_to_remove is None:
         element_to_remove = np.random.choice(list(set(mutant["atom_types"])))
-    mutant["atom_types"], mutant["positions_frac"] = zip(
-        *[
-            (atom, pos)
-            for (atom, pos) in zip(mutant["atom_types"], mutant["positions_frac"])
-            if atom != element_to_remove
-        ]
-    )
+    try:
+        mutant["atom_types"], mutant["positions_frac"] = zip(
+            *[
+                (atom, pos)
+                for (atom, pos) in zip(mutant["atom_types"], mutant["positions_frac"])
+                if atom != element_to_remove
+            ]
+        )
+    except ValueError:
+        raise RuntimeError("Unable to Voronize atoms {}".format(mutant["atom_types"]))
+
     num_removed = mutant["num_atoms"] - len(mutant["atom_types"])
 
     if debug:
