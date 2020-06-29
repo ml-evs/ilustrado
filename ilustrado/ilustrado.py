@@ -7,6 +7,7 @@ import glob
 import shutil
 import os
 import time
+import sys
 from traceback import print_exc
 from json import dumps, dump
 from copy import deepcopy, copy
@@ -24,7 +25,8 @@ from matador.scrapers.castep_scrapers import (
     cell2dict,
     param2dict,
 )
-from matador.export import generate_hash, doc2res
+from matador.export import doc2res
+from matador.export.utils import generate_hash
 from matador.fingerprints.similarity import get_uniq_cursor
 from matador.fingerprints.pdf import PDFFactory
 from matador.utils.chem_utils import get_formula_from_stoich, get_root_source
@@ -52,6 +54,7 @@ class ArtificialSelector:
 
         gene_pool (list(dict))  : initial cursor to use as "Generation 0",
         seed (str)              : seed name of cell and param files for CASTEP,
+        seed_prefix (str)       : if not specifying a seed, this name will prefix all runs
         fitness_metric (str)    : currently either 'hull' or 'test',
         hull (QueryConvexHull)  : matador QueryConvexHull object to calculate distances,
         res_path (str)          : path to folder of res files to create hull, if no hull object passed
@@ -70,7 +73,7 @@ class ArtificialSelector:
         mutations (list(str))   : list of mutation names to use,
         structure_filter (fn(doc)) : any function that takes a matador doc and returns True
                                      or False,
-        check_dupes (bool)         : if True, filter relaxed tructures for uniqueness on-the-fly (DEFAULT: True)
+        check_dupes (bool)         : if True, filter relaxed structures for uniqueness on-the-fly (DEFAULT: True)
         check_dupes_hull (bool)    : compare pdf with all hull structures (DEFAULT: True)
         sandbagging (bool)         : whether or not to disfavour nearby compositions (DEFAULT: False)
         minsep_dict (dict)         : dictionary containing element-specific minimum separations, e.g.
@@ -86,7 +89,7 @@ class ArtificialSelector:
                                      if it finds only one run hash in the folder
         load_only (bool)           : only load structures, do not continue breeding (DEFAULT: False)
         executable (str)           : path to DFT binary (DEFAULT: castep)
-        compute_mode (str)         : either `direct` or `slurm` (DEFAULT: direct)
+        compute_mode (str)         : either `direct`, `slurm`, `manual` (DEFAULT: direct)
         max_num_nodes (int)        : amount of array jobs to run per generation in `slurm` mode,
         walltime_hrs (int)         : maximum walltime for a SLURM array job,
         slurm_template (str)       : path to template slurm script that includes module loads etc,
@@ -107,6 +110,7 @@ class ArtificialSelector:
             # important, required parameters
             "gene_pool": None,
             "seed": None,
+            "seed_prefix": None,
             "fitness_metric": "hull",
             "hull": None,
             "res_path": None,
@@ -308,6 +312,13 @@ class ArtificialSelector:
         )
         LOG.addHandler(file_handler)
 
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setLevel(numeric_loglevel)
+        stream_handler.setFormatter(
+            logging.Formatter("stdout %(asctime)s - %(name)s | %(levelname)8s: %(message)s")
+        )
+        LOG.addHandler(stream_handler)
+
         LOG.info("Starting up ilustrado {}".format(__version__))
 
         # initialise fitness calculator
@@ -377,12 +388,11 @@ class ArtificialSelector:
             if errors:
                 raise RuntimeError("{}".format(errors.join("\n")))
 
-        elif not self.testing:
-            raise SystemExit(
-                "Not in testing mode and failed to provide seed... exiting."
-            )
         else:
-            self.seed = "ga_test"
+            self.seed = "ilustrado"
+            if self.seed_prefix is not None:
+                self.seed = self.seed_prefix
+
             self.cell_dict = {}
             self.param_dict = {}
 
@@ -482,7 +492,7 @@ class ArtificialSelector:
 
         """
 
-        entry = "Beginning birthing of generation {}...".format(len(self.generations))
+        print("Beginning birthing of generation {}...".format(len(self.generations)))
         fname = "{}-genunrelaxed.json".format(self.run_hash)
         if os.path.isfile(fname):
             LOG.info("Found existing generation to be relaxed...")
