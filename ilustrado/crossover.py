@@ -3,7 +3,9 @@
 from copy import deepcopy
 import numpy as np
 from matador.utils.chem_utils import get_stoich
-from matador.utils.cell_utils import create_simple_supercell, standardize_doc_cell
+from matador.utils.cell_utils import (
+    create_simple_supercell, standardize_doc_cell, cart2volume, cart2abc, abc2cart, frac2cart
+)
 
 
 def crossover(parents, method="random_slice", debug=False):
@@ -55,6 +57,13 @@ def random_slice(
     # the slice position of one parent in fractional coordinates
     # (the other is (child_size-cut_val))
     cut_val = child_size * (0.25 + (np.random.rand() / 2.0))
+
+    parent_densities = []
+    for ind, parent in enumerate(parents):
+        if "cell_volume" not in parent:
+            parents[ind]["cell_volume"] = cart2volume(parent["lattice_cart"])
+        parent_densities.append(parent["num_atoms"] / parent["cell_volume"])
+    target_density = sum(parent_densities) / len(parent_densities)
 
     if standardize:
         parents = [standardize_doc_cell(parent) for parent in parents]
@@ -129,4 +138,20 @@ def random_slice(
     child["mutations"] = ["crossover"]
     child["stoichiometry"] = get_stoich(child["atom_types"])
     child["num_atoms"] = len(child["atom_types"])
+
+    if "cell_volume" not in child:
+        child["cell_volume"] = cart2volume(child["lattice_cart"])
+    number_density = child["num_atoms"] / child["cell_volume"]
+
+    # rescale cell based on number density of parents
+    new_scale = np.cbrt(number_density / target_density)
+    child["lattice_abc"] = np.asarray(cart2abc(child["lattice_cart"]))
+    child["lattice_abc"][0] *= new_scale
+    child["lattice_abc"] = child["lattice_abc"].tolist()
+    child["lattice_cart"] = abc2cart(child["lattice_abc"])
+    child["cell_volume"] = cart2volume(child["lattice_cart"])
+    child["positions_abs"] = frac2cart(
+        child["lattice_cart"], child["positions_frac"]
+    )
+
     return child
