@@ -137,6 +137,7 @@ class ArtificialSelector:
             "minsep_dict": None,
             # logistical and compute parameters
             "compute_mode": "direct",
+            "ase_calculator": None,
             "nodes": None,
             "ncores": None,
             "nprocs": 1,
@@ -712,11 +713,10 @@ class ArtificialSelector:
                     ncores = free_cores.pop()
                     # actually relax structure (or not, if testing is turned on)
                     # TODO: refactor to be more general
-                    if self.emt:
+                    if self.ase_calculator:
                         from ilustrado.util import AseRelaxation
-
                         queues.append(mp.Queue())
-                        relaxer = AseRelaxation(newborns[-1], queues[-1])
+                        relaxer = AseRelaxation(newborns[-1], queues[-1], calculator=self.ase_calculator)
 
                     else:
                         if self.testing:

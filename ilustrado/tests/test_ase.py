@@ -24,6 +24,7 @@ def emt_relax():
     """
     from matador.hull import QueryConvexHull
     from ilustrado.ilustrado import ArtificialSelector
+    from ase.calculators.emt import EMT
 
     if os.uname()[1] == "cluster2":
         cpus = cpu_count() - 2
@@ -67,13 +68,13 @@ def emt_relax():
         check_dupes_hull=False,
         ncores=1,
         testing=True,
-        emt=True,
+        ase_calculator=EMT(),
         mutations=["nudge_positions", "permute_atoms", "random_strain", "vacancy"],
         max_num_mutations=1,
         max_num_atoms=50,
         mutation_rate=0.5,
         crossover_rate=0.5,
-        num_generations=5,
+        num_generations=3,
         population=20,
         num_survivors=10,
         elitism=0.5,
