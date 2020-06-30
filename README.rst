@@ -29,6 +29,12 @@ The entrypoint is a Python script that creates an `ArtificialSelector <http://il
 
 [1] Deaven, D. M.; Ho, K. M. Molecular Geometry Optimization with a Genetic Algorithm. Phys. Rev. Lett. 1995, 75, 288, `10.1103/PhysRevLett.75.288 <https://doi.org/10.1103/PhysRevLett.75.288>`_.
 
+Limitations:
+------------
+
+- There are no stopping criteria implemented in ilustrado. Due to the multi-composition nature of the method, it is not easy to define either success or stagnation. Instead, users can perform their own analysis on the output of each generation.
+- Due to the way it initialised in our group, generation of random structures is not performed as part of ilustrado. Instead, we typically start from a phase diagram that has already been well-sampled with a random search.
+- None of the mutation or crossover operators make use of symmetry.
 
 New in v0.3b:
 -------------
