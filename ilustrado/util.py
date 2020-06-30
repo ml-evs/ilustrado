@@ -113,19 +113,32 @@ class NewbornProcess:
 
 
 class AseRelaxation:
-    """ Perform relaxation with ASE LJ or EMT. """
+    """ Perform a variable cell relaxation with ASE,
+    using a predefined calculator.
 
-    def __init__(self, doc, queue, pot_typ="EMT"):
+    """
+    def __init__(self, doc, queue, calculator=None):
+        """ Initialise a relaxation with ASE.
+
+        Parameters:
+            doc (dict): the structure to optimise.
+            queue (mp.Queue): the queue to push the result to.
+
+        Keyword arguments:
+            calculator (ase.Calculator): the calculator object
+                to use for force/energy computation. Default is
+                LennardJones.
+
+        """
         from copy import deepcopy
         from matador.utils.viz_utils import doc2ase
-        from ase.calculators.lj import LennardJones
-        from ase.calculators.emt import EMT
         from ase.constraints import UnitCellFilter
 
-        if pot_type == "LJ":
+        if calculator is None:
+            from ase.calculators.lj import LennardJones
             self.calc = LennardJones()
         else:
-            self.calc = EMT()
+            self.calc = calculator
 
         self.doc = deepcopy(doc)
         self.atoms = doc2ase(doc)
@@ -137,7 +150,6 @@ class AseRelaxation:
         from ase.optimize import LBFGS
 
         cached = sys.__stdout__
-        # sys.stdout = os.devnull
         try:
             optimizer = LBFGS(self.ucf)
             optimizer.logfile = None
