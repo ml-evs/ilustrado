@@ -36,13 +36,6 @@ Limitations:
 - Due to the way it initialised in our group, generation of random structures is not performed as part of ilustrado. Instead, we typically start from a phase diagram that has already been well-sampled with a random search.
 - None of the mutation or crossover operators make use of symmetry.
 
-New in v0.3b:
--------------
-
-- New keyword: ``sandbagging``. When enabled, fitness penalties will be applied to successive sampling of the same region of composition space. By default, the modifier is a multiplicative factor of 0.95 to all compositions within a hypersphere of radius 0.05.
-- ``compute_mode='slurm'`` that makes use of array jobs for "infinite" horizontal scalability
-- improved documentation and examples
-
 .. |MIT License| image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: https://github.com/ml-evs/ilustrado/blob/master/LICENSE
 .. |Documentation Status| image:: https://readthedocs.org/projects/ilustrado/badge/?version=latest

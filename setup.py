@@ -2,12 +2,7 @@ from setuptools import setup, find_packages
 from subprocess import check_output
 import os
 
-try:
-    __version__ = check_output(["git", "describe", "--tags"]).decode("utf-8").strip()
-    __version__ += '+' + (check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])
-                          .decode('utf-8').strip())
-except:
-    __version__ = 'xxx'
+from ilustrado import __version__
 
 with open('requirements/requirements.txt', 'r') as f:
     requirements = [line.strip() for line in f.readlines()]
